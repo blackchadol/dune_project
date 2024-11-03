@@ -1,5 +1,8 @@
-
-
+/*
+1-1. ASCII ART로 intro 함수 작성
+1-2. common.h의 OBJECT_SAMPLE 구조체에 speed 멤버 추가
+1-3. 헤더파일에 object.h 파일 추가 및 유닛들 속성을 정의한 구조체 및 배열 선언
+*/
 
 
 
@@ -48,11 +51,10 @@ int main(void) {
 	init();
 	intro();
 	display(resource, map, cursor);
-
+	
 	while (1) {
 		// loop 돌 때마다(즉, TICK==10ms마다) 키 입력 확인
 		KEY key = get_key();
-
 		// 키 입력이 있으면 처리
 		if (is_arrow_key(key)) {
 			cursor_move(ktod(key));
