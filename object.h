@@ -116,6 +116,19 @@ typedef struct {
 	struct BUILDING* next;
 }BUILDING;
 
+typedef struct {
+	POSITION position;
+	int  move_period;
+	int attack_period;
+
+}SANDWORM;  // 샌드웜 구조체 추가.
+
+typedef struct {
+	int amount; // 스파이스 매장량(1 ~ 9)
+	POSITION position;
+	struct SPICE* next;
+
+}SPICE; // 스파이스 구조체 
 
 //int get_unit_color(Unit* unit) {
 //	switch (unit->type) {
