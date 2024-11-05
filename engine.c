@@ -11,6 +11,9 @@
 1-8 object.h에 스파이스 및 샌드웜 구조체 추가. 
 1-9 object.h에 맵에 객체를 표시하기 위한 색상 정의 16진수로(앞의 4비트는 배경색, 뒤 4비트는 글씨색)
 글씨색은 하얀색으로 고정
+1-10 engine.c에 create_player_unit--> 아군유닛 구조체를 연결리스트로 생성하는 함수구현 
+1-11 display.c에 map color을 전역배열로 선언후 color_default로 초기화 후 displayUnit 함수로 char, 색상을 map에 표현하기 위한 정보를 배열에 저장
+및 display_map 함수를 colorMap배열을 참조해 색상을 표시하도록 바꿈
 */
 
 
@@ -21,12 +24,14 @@
 #include "common.h"
 #include "io.h"
 #include "display.h"
+#include "object.h"
 
 void init(void);
 void intro(void);
 void outro(void);
 void cursor_move(DIRECTION dir);
 void sample_obj_move(void);
+Unit* create_player_unit(UnitType type, POSITION pos, Unit* head);
 POSITION sample_obj_next_position(void);
 
 
@@ -37,7 +42,6 @@ CURSOR cursor = { { 1, 1 }, {1, 1} };
 
 /* ================= game data =================== */
 char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH] = { 0 };
-
 RESOURCE resource = {
 	.spice = 0,
 	.spice_max = 0,
@@ -59,6 +63,7 @@ int main(void) {
 
 	init();
 	intro();
+    init_colorMap();
 	display(resource, map, cursor);
 	
 	while (1) {
@@ -79,7 +84,9 @@ int main(void) {
 		}
 
 		// 샘플 오브젝트 동작
-		sample_obj_move();
+		//sample_obj_move();
+		Unit* player_units = NULL; // 유닛 리스트 초기화
+		player_units = create_player_unit(0, (POSITION) { 10, 10 }, player_units); // 플레이어 유닛 생성
 
 		// 화면 출력
 		display(resource, map, cursor);
@@ -144,7 +151,7 @@ void init(void) {
 	}
 
 	// object sample
-	map[1][obj.pos.row][obj.pos.column] = 'o';
+	//map[1][obj.pos.row][obj.pos.column] = 'o';
 }
 
 // (가능하다면) 지정한 방향으로 커서 이동
@@ -218,4 +225,37 @@ void sample_obj_move(void) {
 	map[1][obj.pos.row][obj.pos.column] = obj.repr;
 
 	obj.next_move_time = sys_clock + obj.speed;
+}
+
+
+
+
+
+// 아군 유닛 생성 함수
+Unit* create_player_unit(UnitType type, POSITION pos, Unit* head) {
+	// 유닛 속성 가져오기
+	const UnitAttributes* attributes = &UNIT_ATTRIBUTES[type];
+
+	// 생성 권한 확인
+	if (attributes->faction != FACTION_PLAYER && attributes->faction != FACTION_COMMON) {
+		printf("이 유닛은 아군 유닛이 아닙니다.\n");
+		return head; // 유닛 생성 실패 시 현재 리스트 반환
+	}
+
+	// 새로운 유닛 동적 할당
+	Unit* new_unit = (Unit*)malloc(sizeof(Unit));
+	if (new_unit == NULL) {
+		fprintf(stderr, "Memory allocation failed\n");
+		return NULL;
+	}
+
+	// 유닛 초기화
+	new_unit->type = type; // 유닛유형
+	new_unit->health = attributes->stamina; // 체력
+	new_unit->pos = pos; // 현재위치
+	new_unit->next = head; // 현재 리스트의 맨 앞에 추가
+
+	displayUnit(map,pos, COLOR_FRIENDLY, 1, 1, attributes->symbol);
+
+	return new_unit;
 }

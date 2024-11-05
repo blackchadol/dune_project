@@ -8,6 +8,15 @@
 #include "display.h"
 #include "io.h"
 
+int colorMap [MAP_HEIGHT][MAP_WIDTH]; // 각 레이어의 색상 초기화
+void init_colorMap() {
+	for (int i = 0; i < MAP_HEIGHT; i++) {
+		for (int j = 0; j < MAP_WIDTH; j++) {
+			colorMap[i][j] = COLOR_DEFAULT;
+		}
+	}
+}
+
 // 출력할 내용들의 좌상단(topleft) 좌표
 const POSITION resource_pos = { 0, 0 };
 const POSITION map_pos = { 1, 0 };
@@ -58,14 +67,49 @@ void project(char src[N_LAYER][MAP_HEIGHT][MAP_WIDTH], char dest[MAP_HEIGHT][MAP
 	}
 }
 
+void displayUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos, int setColor, int size, int layer, char displayChar) {
+	// 레이어가 유효한지 확인
+	if (layer < 0 || layer > 1) {
+		printf("Invalid layer: %d\n", layer);
+		return;
+	}
+	// 크기에 따라 유닛 표시
+	if (size == 2) {
+		// 2x2 크기 유닛
+		if (pos.row < MAP_HEIGHT - 1 && pos.column < MAP_WIDTH - 1) {
+			map[layer][pos.row][pos.column] = displayChar; // 좌측 상단 표시
+			map[layer][pos.row + 1][pos.column] = ' '; // 아래쪽 칸 비우기
+			map[layer][pos.row][pos.column + 1] = ' '; // 우측 칸 비우기
+			map[layer][pos.row + 1][pos.column + 1] = ' '; // 우측 하단 비우기
+			for (int i = 0; i < 2; i++) {
+				for (int j = 0; j < 2; j++) {
+					colorMap[pos.row+i][pos.column+j] = setColor;
+				}
+			}
+	
+
+		}
+	}
+	else { // size == 1
+		// 1x1 크기 유닛
+		if (pos.row < MAP_HEIGHT && pos.column < MAP_WIDTH) {
+			map[layer][pos.row][pos.column] = displayChar; // 단일 칸 표시
+			colorMap[pos.row][pos.column] = setColor;
+		}
+	}
+
+	
+}
+
 void display_map(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
 	project(map, backbuf);
-
 	for (int i = 0; i < MAP_HEIGHT; i++) {
 		for (int j = 0; j < MAP_WIDTH; j++) {
 			if (frontbuf[i][j] != backbuf[i][j]) {
 				POSITION pos = { i, j };
-				printc(padd(map_pos, pos), backbuf[i][j], COLOR_DEFAULT);
+				int color = colorMap[i][j];
+
+				printc(padd(map_pos, pos), backbuf[i][j], color);
 			}
 			frontbuf[i][j] = backbuf[i][j];
 		}
@@ -83,3 +127,10 @@ void display_cursor(CURSOR cursor) {
 	ch = frontbuf[curr.row][curr.column];
 	printc(padd(map_pos, curr), ch, COLOR_CURSOR);
 }
+
+
+void display_system_message() {
+
+}
+
+

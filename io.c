@@ -21,6 +21,10 @@ void printc(POSITION pos, char ch, int color) {
 	printf("%c", ch);
 }
 
+void printObject(POSITION pos, char ch, int color, int size) {
+
+}
+
 KEY get_key(void) {
 	if (!_kbhit()) {  // 입력된 키가 있는지 확인
 		return k_none;

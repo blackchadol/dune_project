@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include "common.h"
-#define COLOR_FRIENDLY 9  // 아군 배경 색상 (파란색)
-#define COLOR_ENEMY   4   // 적군 배경 색상 (빨간색)
-#define COLOR_SANDWORM  6    // 샌드웜 색상 (황토색)
-#define COLOR_TERRAIN   8    // 기타 지형 색상 (회색)
-#define COLOR_SPICE  14   // 스파이스 색상 (주황색)
-#define COLOR_PLATE   0    // 장판 색상 (검은색)
+// 맵에 객체를 표시하기 위한 색상 정의, 필요에 따라 색상 임의 변경함//
+#define COLOR_FRIENDLY 0x9F   // 아군 배경 색상 (파란색)
+#define COLOR_ENEMY    0xCF   // 적군 배경 색상 (빨간색)
+#define COLOR_SANDWORM 0x6F   // 샌드웜 색상 (황토색)
+#define COLOR_ROCK     0x7F   // 기타 지형 색상 (회색)
+#define COLOR_SPICE    0xdF   // 스파이스 색상 (보라색)
+#define COLOR_PLATE    0x8F   // 장판 색상 (검은색)
 //typedef struct {
 //	int size; // 표시할 객체가 2x2인지, 1x1인지
 //	int color; // 표시할 캐릭터의 색상.
@@ -40,7 +41,7 @@ typedef struct {
 	int move_period; // 이동주기
 	int attack_power; // 공격력
 	int attack_period; // 공격주기
-	//int stamina;
+	int stamina;
 	int vision;//시야
 	char command[2]; //명령어 (최대 2개)
 	char symbol; // 화면에 표시할 문자
@@ -49,26 +50,25 @@ typedef struct {
 
 /* 유닛 속성 중 없음 = -1 으로 표현함*/
 const UnitAttributes UNIT_ATTRIBUTES[NUM_UNIT_TYPES] = {
-	{HARVESTER,5,5,2000, -1, -1, 0, {'H','M'}, 'H',FACTION_COMMON},
-	{FREMEN,5,2,400,15,200,8,{'M','P'}, 'F',FACTION_PLAYER},
-	{SOILDIER,1,1,1000,5,800,1,{'M','P'}, 'S',FACTION_PLAYER},
-	{PROJECTION,1,1,1200,6,600,1,{'M','P'}, 'P',FACTION_ENEMY},
-	{TANK,12,5,3000,40,4000,4,{'M','P'}, 'T',FACTION_ENEMY}
+	{HARVESTER,5,5,2000, -1, -1, 70,0, {'H','M'}, 'H',FACTION_COMMON},
+	{FREMEN,5,2,400,15,200,25,8,{'M','P'}, 'F',FACTION_PLAYER},
+	{SOILDIER,1,1,1000,5,800,15,1,{'M','P'}, 'S',FACTION_PLAYER},
+	{PROJECTION,1,1,1200,6,600,10,1,{'M','P'}, 'P',FACTION_ENEMY},
+	{TANK,12,5,3000,40,4000,60,4,{'M','P'}, 'T',FACTION_ENEMY}
 };
-// 색상 구분을 위해 색상 경우의 수를 열거형으로 선언//
-typedef enum {
-	UNIT_TYPE_FRIENDLY, // 아군 유닛
-	UNIT_TYPE_ENEMY,    // 적군 유닛
-	UNIT_TYPE_SANDWORM, // 샌드웜
-	UNIT_TYPE_OTHER,    // 기타 유닛
-	TERRAIN_TYPE_SPICE, // 스파이스 지형
-	TERRAIN_TYPE_LAND,  // 장판 지형
-	// 추가 항목 필요 시 정의
-}UnitColor;
+//// 색상 구분을 위해 색상 경우의 수를 열거형으로 선언//
+//typedef enum {
+//	UNIT_TYPE_FRIENDLY, // 아군 유닛
+//	UNIT_TYPE_ENEMY,    // 적군 유닛
+//	UNIT_TYPE_SANDWORM, // 샌드웜
+//	UNIT_TYPE_OTHER,    // 기타 유닛
+//	TERRAIN_TYPE_SPICE, // 스파이스 지형
+//	TERRAIN_TYPE_LAND,  // 장판 지형
+//	// 추가 항목 필요 시 정의
+//}UnitColor;
 
 // 유닛을 연결리스트로 관리하기 위해 가변 수치랑, 다음 구조체를 가리키는 포인터를 넣은 구조체 선언///
 typedef struct Unit {
-	UnitColor color;
 	int type;               // 유닛 유형 인덱스
 	int health;             // 현재 체력
 	POSITION pos;           // 현재 위치
@@ -97,7 +97,7 @@ typedef struct {
 	FactionType faction;
 }BuildingAttributes;
 
-const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES]{
+const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES] = {
 	{BASE, 0, 'H','B',FACTION_COMMON},
 	{PLATE, 1, -1,'P',FACTION_COMMON},
 	{DORMITORY,2,-1,'D',FACTION_COMMON},
@@ -110,7 +110,6 @@ const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES]{
 
 //=== 건물도 연결리스트로 관리하기 위한 구조체 선언========?/////////
 typedef struct {
-	UnitColor color;
 	int type; // 건물유형 인덱스
 	int durability; // 내구도
 	struct BUILDING* next;

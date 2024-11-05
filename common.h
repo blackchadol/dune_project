@@ -14,6 +14,11 @@
 #define MAP_WIDTH	60
 #define MAP_HEIGHT	18
 
+typedef struct {
+	char character;
+	int color; // 색상 추가
+} Cell;
+
 
 /* ================= 위치와 방향 =================== */
 // 맵에서 위치를 나타내는 구조체
