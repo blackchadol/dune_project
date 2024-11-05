@@ -92,20 +92,21 @@ typedef enum {
 typedef struct {
 	BuildingType type;
 	int cost; // 건설비용
+	int durability; // 내구도
 	char command; //명령어
 	char symbol; // 화면에 표시할 문자
 	FactionType faction;
 }BuildingAttributes;
 
 const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES] = {
-	{BASE, 0, 'H','B',FACTION_COMMON},
-	{PLATE, 1, -1,'P',FACTION_COMMON},
-	{DORMITORY,2,-1,'D',FACTION_COMMON},
-	{GARAGE,4,-1,'G',FACTION_COMMON},
-	{BARRACKS,4,'S','B',FACTION_PLAYER},
-	{SHELTER,5,'F','S',FACTION_PLAYER},
-	{ARENA,3,'F','A',FACTION_ENEMY},
-	{FACTORY,5,'T','F',FACTION_ENEMY}
+	{BASE, 0,50, 'H','B',FACTION_COMMON},
+	{PLATE, 1,-1, -1,'P',FACTION_COMMON},
+	{DORMITORY,2,10,-1,'D',FACTION_COMMON},
+	{GARAGE,4,10,-1,'G',FACTION_COMMON},
+	{BARRACKS,4,20,'S','B',FACTION_PLAYER},
+	{SHELTER,5,30,'F','S',FACTION_PLAYER},
+	{ARENA,3,15,'F','A',FACTION_ENEMY},
+	{FACTORY,5,30,'T','F',FACTION_ENEMY}
 };
 
 //=== 건물도 연결리스트로 관리하기 위한 구조체 선언========?/////////

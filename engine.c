@@ -15,6 +15,8 @@
 1-11 display.c에 map color을 전역배열로 선언후 color_default로 초기화 후 displayUnit 함수로 char, 색상을 map에 표현하기 위한 정보를 배열에 저장
 및 display_map 함수를 colorMap배열을 참조해 색상을 표시하도록 바꿈
 1-12 display.c에 displatunit 함수에서 2x2 사이즈의 블럭을 그릴때 빈칸을 그리지 않는 문제가 발생해 . 으로 대체 
+1-13 createUnit 함수를 아군 적군 구분안하고 한번에 관리하도록 설계. 연결리스트에서는 faction 멤버로 구분. 
+1-14 createBuilding 함수제작 -> layer 0에 건물 설계 
 */
 
 
@@ -33,6 +35,7 @@ void outro(void);
 void cursor_move(DIRECTION dir);
 void sample_obj_move(void);
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
+BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
 POSITION sample_obj_next_position(void);
 
 
@@ -86,8 +89,11 @@ int main(void) {
 
 		// 샘플 오브젝트 동작
 		//sample_obj_move();
-		Unit* player_units = NULL; // 유닛 리스트 초기화
-		player_units = createUnit(0, (POSITION) { 10, 10 }, player_units, FACTION_PLAYER); // 플레이어 유닛 생성
+		Unit* units = NULL; // 유닛 리스트 초기화
+		units = createUnit(0, (POSITION) { 10, 10 }, units, FACTION_PLAYER); // 플레이어 유닛 생성
+
+		BUILDING* buildings = NULL;
+		buildings = createBuilding(0, (POSITION) { 3, 5 }, buildings, FACTION_PLAYER);
 
 		// 화면 출력
 		display(resource, map, cursor);
@@ -274,4 +280,41 @@ Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction) {
 	displayUnit(map,pos, color, 1, 1, attributes->symbol);
 
 	return new_unit;
+}
+
+
+BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction) {
+	const BuildingAttributes* attributes = &BUILDINGATTRIBUTES[type];
+	if (attributes->faction != faction && attributes->faction != FACTION_COMMON) {
+		printf("이 건물은 생성할 수 없습니다.\n");
+		return head; // 유닛 생성 실패 시 현재 리스트 반환
+	}
+
+	BUILDING* new_building = (BUILDING*)malloc(sizeof(BUILDING));
+	if (new_building == NULL) {
+		fprintf(stderr, "Memory allocation failed\n");
+		return NULL;
+	}
+
+	int color;
+	if (type == PLATE) {
+		color = COLOR_PLATE;
+	}
+	else if (faction == FACTION_PLAYER) {
+		color = COLOR_FRIENDLY;
+	}
+	else if (faction == FACTION_ENEMY) {
+		color = COLOR_ENEMY;
+	}
+	else {
+		// 잘못된 FACTION 입력
+		return head;
+	}
+
+	new_building->type = type; // 빌딩 유형
+	new_building->durability = attributes->durability; // 내구도 초기화 (비용으로 설정)
+	new_building->next = head; // 현재 리스트의 맨 앞에 추가
+
+	displayUnit(map, pos, color, 2, 0, attributes->symbol);
+
 }
