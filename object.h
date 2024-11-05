@@ -23,7 +23,7 @@ typedef enum {
 	SOILDIER,
 	PROJECTION, // 투사
 	TANK, // 중전차
-	SANDWORD, // 샌드웜
+	//SANDWORD, // 샌드웜은 따로 처리하기로 결정, 중립 유닛이기 때문
 	NUM_UNIT_TYPES
 }UnitType;
 // ========유닛 및 건물이 공통 건설권한이 있는지, 아군만 있는지, 적군만 있는지 판단하기 위함 ========= //
@@ -44,16 +44,16 @@ typedef struct {
 	int vision;//시야
 	char command[2]; //명령어 (최대 2개)
 	char symbol; // 화면에 표시할 문자
+	FactionType faction; // 생성권한
 }UnitAttributes; // 유닛의 고정속성을 정의하는 
 
 /* 유닛 속성 중 없음 = -1 으로 표현함*/
 const UnitAttributes UNIT_ATTRIBUTES[NUM_UNIT_TYPES] = {
-	{HARVESTER,5,5,2000, -1, -1, 0, {'H','M'}, 'H'},
-	{FREMEN,5,2,400,15,200,8,{'M','P'}, 'F'},
-	{SOILDIER,1,1,1000,5,800,1,{'M','P'}, 'S'},
-	{PROJECTION,1,1,1200,6,600,1,{'M','P'}, 'P'},
-	{TANK,12,5,3000,40,4000,4,{'M','P'}, 'T'},
-	{SANDWORD,-1,-1,2500,-100,10000,100,{-1},'W'}
+	{HARVESTER,5,5,2000, -1, -1, 0, {'H','M'}, 'H',FACTION_COMMON},
+	{FREMEN,5,2,400,15,200,8,{'M','P'}, 'F',FACTION_PLAYER},
+	{SOILDIER,1,1,1000,5,800,1,{'M','P'}, 'S',FACTION_PLAYER},
+	{PROJECTION,1,1,1200,6,600,1,{'M','P'}, 'P',FACTION_ENEMY},
+	{TANK,12,5,3000,40,4000,4,{'M','P'}, 'T',FACTION_ENEMY}
 };
 // 색상 구분을 위해 색상 경우의 수를 열거형으로 선언//
 typedef enum {
@@ -94,17 +94,18 @@ typedef struct {
 	int cost; // 건설비용
 	char command; //명령어
 	char symbol; // 화면에 표시할 문자
+	FactionType faction;
 }BuildingAttributes;
 
 const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES]{
-	{BASE, 0, 'H','B'},
-	{PLATE, 1, -1,'P'},
-	{DORMITORY,2,-1,'D'},
-	{GARAGE,4,-1,'G'},
-	{BARRACKS,4,'S','B'},
-	{SHELTER,5,'F','S'},
-	{ARENA,3,'F','A'},
-	{FACTORY,5,'T','F'}
+	{BASE, 0, 'H','B',FACTION_COMMON},
+	{PLATE, 1, -1,'P',FACTION_COMMON},
+	{DORMITORY,2,-1,'D',FACTION_COMMON},
+	{GARAGE,4,-1,'G',FACTION_COMMON},
+	{BARRACKS,4,'S','B',FACTION_PLAYER},
+	{SHELTER,5,'F','S',FACTION_PLAYER},
+	{ARENA,3,'F','A',FACTION_ENEMY},
+	{FACTORY,5,'T','F',FACTION_ENEMY}
 };
 
 //=== 건물도 연결리스트로 관리하기 위한 구조체 선언========?/////////
