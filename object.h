@@ -26,11 +26,11 @@ typedef enum {
 	SANDWORD, // 샌드웜
 	NUM_UNIT_TYPES
 }UnitType;
-// ========유닛 및 건물이 아군소유인지, 적군소유인지, 중립인지 판단하기 위함 ========= //
+// ========유닛 및 건물이 공통 건설권한이 있는지, 아군만 있는지, 적군만 있는지 판단하기 위함 ========= //
 typedef enum {
 	FACTION_PLAYER,   // 아군
 	FACTION_ENEMY,    // 적군
-	FACTION_NEUTRAL   // 중립
+	FACTION_COMMON // 공통
 } FactionType;
 
 typedef struct {
@@ -76,17 +76,57 @@ typedef struct Unit {
 } Unit;
 
 
-int get_unit_color(Unit* unit) {
-	switch (unit->type) {
-	case UNIT_TYPE_FRIENDLY:
-		return COLOR_FRIENDLY; // 아군 배경 색상
-	case UNIT_TYPE_ENEMY:
-		return COLOR_ENEMY; // 적군 배경 색상
-	case UNIT_TYPE_SANDWORM:
-		return COLOR_SANDWORM; // 샌드웜 색상
-	case UNIT_TYPE_OTHER:
-		return COLOR_TERRAIN; // 기타 지형 색상
-	default:
-		return COLOR_TERRAIN; // 기본 색상 (회색)
-	}
-}
+typedef enum {
+	BASE,
+	PLATE,
+	DORMITORY,
+	GARAGE,
+	BARRACKS,
+	SHELTER,
+	ARENA,
+	FACTORY,
+	NUM_BUILDING_TYPES
+}BuildingType;
+//=========== 건물(바위를 제외한)의 고정수치를 구조체로 선언==============//
+
+typedef struct {
+	BuildingType type;
+	int cost; // 건설비용
+	char command; //명령어
+	char symbol; // 화면에 표시할 문자
+}BuildingAttributes;
+
+const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES]{
+	{BASE, 0, 'H','B'},
+	{PLATE, 1, -1,'P'},
+	{DORMITORY,2,-1,'D'},
+	{GARAGE,4,-1,'G'},
+	{BARRACKS,4,'S','B'},
+	{SHELTER,5,'F','S'},
+	{ARENA,3,'F','A'},
+	{FACTORY,5,'T','F'}
+};
+
+//=== 건물도 연결리스트로 관리하기 위한 구조체 선언========?/////////
+typedef struct {
+	UnitColor color;
+	int type; // 건물유형 인덱스
+	int durability; // 내구도
+	struct BUILDING* next;
+}BUILDING;
+
+
+//int get_unit_color(Unit* unit) {
+//	switch (unit->type) {
+//	case UNIT_TYPE_FRIENDLY:
+//		return COLOR_FRIENDLY; // 아군 배경 색상
+//	case UNIT_TYPE_ENEMY:
+//		return COLOR_ENEMY; // 적군 배경 색상
+//	case UNIT_TYPE_SANDWORM:
+//		return COLOR_SANDWORM; // 샌드웜 색상
+//	case UNIT_TYPE_OTHER:
+//		return COLOR_TERRAIN; // 기타 지형 색상
+//	default:
+//		return COLOR_TERRAIN; // 기본 색상 (회색)
+//	}
+//}
