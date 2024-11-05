@@ -78,9 +78,9 @@ void displayUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos, int set
 		// 2x2 크기 유닛
 		if (pos.row < MAP_HEIGHT - 1 && pos.column < MAP_WIDTH - 1) {
 			map[layer][pos.row][pos.column] = displayChar; // 좌측 상단 표시
-			map[layer][pos.row + 1][pos.column] = ' '; // 아래쪽 칸 비우기
-			map[layer][pos.row][pos.column + 1] = ' '; // 우측 칸 비우기
-			map[layer][pos.row + 1][pos.column + 1] = ' '; // 우측 하단 비우기
+			map[layer][pos.row + 1][pos.column] = '.'; // 아래쪽 칸 비우기
+			map[layer][pos.row][pos.column + 1] = '.'; // 우측 칸 비우기
+			map[layer][pos.row + 1][pos.column + 1] = '.'; // 우측 하단 비우기
 			for (int i = 0; i < 2; i++) {
 				for (int j = 0; j < 2; j++) {
 					colorMap[pos.row+i][pos.column+j] = setColor;

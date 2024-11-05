@@ -14,6 +14,7 @@
 1-10 engine.c에 create_player_unit--> 아군유닛 구조체를 연결리스트로 생성하는 함수구현 
 1-11 display.c에 map color을 전역배열로 선언후 color_default로 초기화 후 displayUnit 함수로 char, 색상을 map에 표현하기 위한 정보를 배열에 저장
 및 display_map 함수를 colorMap배열을 참조해 색상을 표시하도록 바꿈
+1-12 display.c에 displatunit 함수에서 2x2 사이즈의 블럭을 그릴때 빈칸을 그리지 않는 문제가 발생해 . 으로 대체 
 */
 
 
@@ -31,7 +32,7 @@ void intro(void);
 void outro(void);
 void cursor_move(DIRECTION dir);
 void sample_obj_move(void);
-Unit* create_player_unit(UnitType type, POSITION pos, Unit* head);
+Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
 POSITION sample_obj_next_position(void);
 
 
@@ -86,7 +87,7 @@ int main(void) {
 		// 샘플 오브젝트 동작
 		//sample_obj_move();
 		Unit* player_units = NULL; // 유닛 리스트 초기화
-		player_units = create_player_unit(0, (POSITION) { 10, 10 }, player_units); // 플레이어 유닛 생성
+		player_units = createUnit(0, (POSITION) { 10, 10 }, player_units, FACTION_PLAYER); // 플레이어 유닛 생성
 
 		// 화면 출력
 		display(resource, map, cursor);
@@ -232,13 +233,14 @@ void sample_obj_move(void) {
 
 
 // 아군 유닛 생성 함수
-Unit* create_player_unit(UnitType type, POSITION pos, Unit* head) {
+Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction) {
 	// 유닛 속성 가져오기
 	const UnitAttributes* attributes = &UNIT_ATTRIBUTES[type];
-
+	
+ 
 	// 생성 권한 확인
-	if (attributes->faction != FACTION_PLAYER && attributes->faction != FACTION_COMMON) {
-		printf("이 유닛은 아군 유닛이 아닙니다.\n");
+	if (attributes->faction != faction && attributes->faction != FACTION_COMMON) {
+		printf("이 유닛은 생성할 수 없습니다.\n");
 		return head; // 유닛 생성 실패 시 현재 리스트 반환
 	}
 
@@ -249,13 +251,27 @@ Unit* create_player_unit(UnitType type, POSITION pos, Unit* head) {
 		return NULL;
 	}
 
+	
 	// 유닛 초기화
 	new_unit->type = type; // 유닛유형
 	new_unit->health = attributes->stamina; // 체력
 	new_unit->pos = pos; // 현재위치
 	new_unit->next = head; // 현재 리스트의 맨 앞에 추가
 
-	displayUnit(map,pos, COLOR_FRIENDLY, 1, 1, attributes->symbol);
+	int color;
+	if (faction == FACTION_PLAYER) {
+		color = COLOR_FRIENDLY;
+	}
+	else if (faction == FACTION_ENEMY) {
+		color = COLOR_ENEMY;
+	}
+	else {
+		// 잘못된 FACTION 입력
+		return head;
+	}
+	
+
+	displayUnit(map,pos, color, 1, 1, attributes->symbol);
 
 	return new_unit;
 }
