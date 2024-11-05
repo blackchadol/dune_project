@@ -118,7 +118,7 @@ typedef struct {
 
 typedef struct {
 	POSITION position;
-	int  move_period;
+	int move_period;
 	int attack_period;
 
 }SANDWORM;  // »÷µå¿ú ±¸Á¶Ã¼ Ãß°¡.

@@ -17,6 +17,7 @@
 1-12 display.c에 displatunit 함수에서 2x2 사이즈의 블럭을 그릴때 빈칸을 그리지 않는 문제가 발생해 . 으로 대체 
 1-13 createUnit 함수를 아군 적군 구분안하고 한번에 관리하도록 설계. 연결리스트에서는 faction 멤버로 구분. 
 1-14 createBuilding 함수제작 -> layer 0에 건물 설계 
+1-15 create sandworm, spice 함수제작, startObject ㅅ함수를 만들어서 게임 초기상태 표시
 */
 
 
@@ -34,9 +35,12 @@ void intro(void);
 void outro(void);
 void cursor_move(DIRECTION dir);
 void sample_obj_move(void);
+void startObject();
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
 BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
 POSITION sample_obj_next_position(void);
+SANDWORM createSandworm(POSITION pos);
+SPICE* createSpice(int amount, POSITION pos, SPICE* head);
 
 
 /* ================= control =================== */
@@ -68,8 +72,8 @@ int main(void) {
 	init();
 	intro();
     init_colorMap();
+	startObject();
 	display(resource, map, cursor);
-	
 	while (1) {
 		// loop 돌 때마다(즉, TICK==10ms마다) 키 입력 확인
 		KEY key = get_key();
@@ -89,11 +93,11 @@ int main(void) {
 
 		// 샘플 오브젝트 동작
 		//sample_obj_move();
-		Unit* units = NULL; // 유닛 리스트 초기화
-		units = createUnit(0, (POSITION) { 10, 10 }, units, FACTION_PLAYER); // 플레이어 유닛 생성
+		//Unit* units = NULL; // 유닛 리스트 초기화
+		//units = createUnit(0, (POSITION) { 10, 10 }, units, FACTION_PLAYER); // 플레이어 유닛 생성
 
-		BUILDING* buildings = NULL;
-		buildings = createBuilding(0, (POSITION) { 3, 5 }, buildings, FACTION_PLAYER);
+		//BUILDING* buildings = NULL;
+		//buildings = createBuilding(0, (POSITION) { 3, 5 }, buildings, FACTION_PLAYER);
 
 		// 화면 출력
 		display(resource, map, cursor);
@@ -249,6 +253,10 @@ Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction) {
 		printf("이 유닛은 생성할 수 없습니다.\n");
 		return head; // 유닛 생성 실패 시 현재 리스트 반환
 	}
+	if (map[1][pos.row][pos.column] != -1) { // 생성하려는 위치에 다른 오브젝트가 있을 때 
+		printf("이 유닛은 생성할 수 없습니다.\n");
+		return head; // 유닛 생성 실패 시 현재 리스트 반환
+	}
 
 	// 새로운 유닛 동적 할당
 	Unit* new_unit = (Unit*)malloc(sizeof(Unit));
@@ -289,6 +297,12 @@ BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, Factio
 		printf("이 건물은 생성할 수 없습니다.\n");
 		return head; // 유닛 생성 실패 시 현재 리스트 반환
 	}
+	if (type != PLATE) {
+		if (map[0][pos.row][pos.column] != 'P') { // 생성하려는 위치에 다른 오브젝트가 있을 때 또는 장판이 아닐때. 
+			printf("이 건물은 생성할 수 없습니다.\n");
+			return head; // 유닛 생성 실패 시 현재 리스트 반환
+		}
+	}
 
 	BUILDING* new_building = (BUILDING*)malloc(sizeof(BUILDING));
 	if (new_building == NULL) {
@@ -316,5 +330,55 @@ BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, Factio
 	new_building->next = head; // 현재 리스트의 맨 앞에 추가
 
 	displayUnit(map, pos, color, 2, 0, attributes->symbol);
+
+}
+
+SANDWORM createSandworm(POSITION pos) {
+	SANDWORM sandworm = { pos, 2500, 10000 };
+	displayUnit(map, pos, COLOR_SANDWORM, 1, 1, 'W');
+	return sandworm;
+}
+
+SPICE* createSpice(int howMuch, POSITION pos, SPICE* head) {
+	SPICE* new_spice = (SPICE*)malloc(sizeof(SPICE));
+	if (new_spice == NULL) {
+		fprintf(stderr, "Memory allocation failed\n");
+		return NULL;
+	}
+	new_spice->amount = howMuch;
+	new_spice->position = pos;
+	new_spice->next = head;
+	char symbol = new_spice->amount + '0';
+	displayUnit(map, pos, COLOR_SPICE, 1, 0, symbol);
+
+}
+
+
+void startObject() {
+	Unit* units = NULL; // 유닛 리스트 초기화
+	units = createUnit(0, (POSITION) { 14, 1 }, units, FACTION_PLAYER); // 플레이어 유닛 생성
+	units = createUnit(0, (POSITION) { 3, 58 }, units, FACTION_ENEMY); // 플레이어 유닛 생성
+	BUILDING* buildings = NULL;
+	buildings = createBuilding(1, (POSITION) { 15, 1 }, buildings, FACTION_PLAYER);
+	buildings = createBuilding(0, (POSITION) { 15, 1 }, buildings, FACTION_PLAYER);
+	buildings = createBuilding(1, (POSITION) { 15, 3 }, buildings, FACTION_PLAYER);
+
+	buildings = createBuilding(1, (POSITION) { 1, 57 }, buildings, FACTION_ENEMY);
+	buildings = createBuilding(0, (POSITION) { 1, 57 }, buildings, FACTION_ENEMY);
+
+	SPICE* spice = NULL;
+	spice = createSpice(5, (POSITION) { 12, 1 }, spice);
+	spice = createSpice(5, (POSITION) { 5, 58 }, spice);
+
+	SANDWORM sandworm1 = createSandworm((POSITION) { 5, 10 });
+	SANDWORM sandworm2 = createSandworm((POSITION) { 11, 40 });
+
+
+	////====== 돌 그리기 ============///
+
+	displayUnit(map, (POSITION) { 10, 30 }, COLOR_ROCK, 2, 0, 'R');
+	displayUnit(map, (POSITION) { 5, 15 }, COLOR_ROCK, 2, 0, 'R');
+	displayUnit(map, (POSITION) { 8, 42}, COLOR_ROCK, 1, 0, 'R');
+	displayUnit(map, (POSITION) { 15, 13 }, COLOR_ROCK, 1, 0, 'R');
 
 }
