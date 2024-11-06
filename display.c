@@ -17,6 +17,12 @@ void init_colorMap() {
 	}
 }
 
+char status_window[STATUS_HEIGHT][STATUS_WIDTH];  // 마지막은 문자열 끝을 위한 '\0'
+char status_frontbuf[STATUS_HEIGHT][STATUS_WIDTH] = { 0 };  // 상태창 프론트버퍼
+char status_backbuf[STATUS_HEIGHT][STATUS_WIDTH] = { 0 };   // 상태창 백버퍼
+
+
+
 // 출력할 내용들의 좌상단(topleft) 좌표
 const POSITION resource_pos = { 0, 0 };
 const POSITION map_pos = { 1, 0 };
@@ -29,8 +35,9 @@ void project(char src[N_LAYER][MAP_HEIGHT][MAP_WIDTH], char dest[MAP_HEIGHT][MAP
 void display_resource(RESOURCE resource);
 void display_map(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 void display_cursor(CURSOR cursor);
-
-
+void display_status();
+void init_status();
+void insert_status_message(const char* message);
 void display(
 	RESOURCE resource,
 	char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH],
@@ -40,7 +47,7 @@ void display(
 	display_map(map);
 	display_cursor(cursor);
 	// display_system_message()
-	// display_object_info()
+	display_status();
 	// display_commands()
 	// ...
 }
@@ -128,9 +135,71 @@ void display_cursor(CURSOR cursor) {
 	printc(padd(map_pos, curr), ch, COLOR_CURSOR);
 }
 
-
-void display_system_message() {
-
+void init_status() {
+		// 상태창 테두리 설정
+		for (int i = 0; i < STATUS_HEIGHT; i++) {
+			for (int j = 0; j < STATUS_WIDTH; j++) {
+				// 상단, 하단, 좌우 테두리
+				if (i == 0 || i == STATUS_HEIGHT - 1 || j == 0 || j == STATUS_WIDTH -1) {
+					status_window[i][j] = '#';  // 상태창 테두리 '#'
+				}
+				else {
+					// 내부는 공백으로 채움
+					status_window[i][j] = ' ';
+				}
+			}
+		}
+	
 }
+
+void display_status() {
+	// 상태창을 한 번에 출력, 변경된 부분만 갱신
+	for (int i = 0; i < STATUS_HEIGHT; i++) {
+		for (int j = 0; j < STATUS_WIDTH; j++) {
+
+			if (status_window[i][j] >= 0) {
+				status_backbuf[i][j] = status_window[i][j];
+			}
+		}
+	}
+
+
+	for (int i = 0; i < STATUS_HEIGHT; i++) {
+		for (int j = 0; j < STATUS_WIDTH; j++) {
+			if (status_frontbuf[i][j] != status_backbuf[i][j]) {
+				POSITION pos = { i + 1, j + 60 };
+				printc(pos, status_backbuf[i][j], COLOR_DEFAULT);  // 상태창에 색상 적용
+			}
+			status_frontbuf[i][j] = status_backbuf[i][j];  // 변경된 부분만 갱신된 상태로 저장
+		}
+	}
+
+	
+}
+
+void insert_status_message(const char* message) {
+	// 상태창이 꽉 차면, 맨 위의 메시지를 제거하고 나머지 메시지를 위로 밀기
+	for (int i = 1; i + 1 < STATUS_HEIGHT - 1; i++) {
+		// 각 줄을 한 줄씩 위로 밀어냄
+		memcpy(status_window[i], status_window[i+1], STATUS_WIDTH);
+	}
+
+	// 새로운 메시지 추가 (맨 밑에)
+	int message_length = strlen(message);
+	// 메시지가 상태창의 너비보다 길면 자르기
+	if (message_length > STATUS_WIDTH) {
+		message_length = STATUS_WIDTH;
+	}
+	// 새로운 메시지를 맨 아래 줄에 추가
+	for (int i = 0; i < message_length; i++) {
+		status_window[STATUS_HEIGHT - 2][i + 1] = message[i];  // 좌측의 1 칸을 공백으로 두고 입력
+	}
+	//// 나머지는 공백으로 초기화
+	//for (int i = message_length; i < STATUS_WIDTH; i++) {
+	//	status_window[STATUS_HEIGHT - 2][i + 1] = ' ';
+	//}
+}
+
+
 
 
