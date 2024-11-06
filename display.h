@@ -18,6 +18,12 @@
 #define STATUS_WIDTH 40
 #define STATUS_HEIGHT 18
 
+#define SYSTEM_MESSAGE_WIDTH 60
+#define SYSTEM_MESSAGE_HEIGHT 5
+
+#define COMMAND_WIDTH 40
+#define COMMAND_HEIGHT 5
+
 // 지금은 자원, 맵, 커서만 표시
 // 앞으로 화면에 표시할 내용들 여기에 추가하기
 void display(
@@ -28,5 +34,10 @@ void display(
 void displayUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos, int setColor, int size, int layer, char displayChar);
 #endif
 void init_colorMap();
+
 void init_status();
 void insert_status_message(const char* message);
+void init_system_message();
+void insert_system_message(const char* message);
+void init_command();
+void insert_command_message(const char* message);

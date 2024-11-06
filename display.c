@@ -17,10 +17,17 @@ void init_colorMap() {
 	}
 }
 
-char status_window[STATUS_HEIGHT][STATUS_WIDTH];  // 마지막은 문자열 끝을 위한 '\0'
+char status_window[STATUS_HEIGHT][STATUS_WIDTH];  // 마지막은 문자열 끝을 위한 
 char status_frontbuf[STATUS_HEIGHT][STATUS_WIDTH] = { 0 };  // 상태창 프론트버퍼
 char status_backbuf[STATUS_HEIGHT][STATUS_WIDTH] = { 0 };   // 상태창 백버퍼
 
+char system_message[SYSTEM_MESSAGE_HEIGHT][SYSTEM_MESSAGE_WIDTH];
+char system_message_frontbuf[SYSTEM_MESSAGE_HEIGHT][SYSTEM_MESSAGE_WIDTH] = { 0 };
+char system_message_backbuf[SYSTEM_MESSAGE_HEIGHT][SYSTEM_MESSAGE_WIDTH] = { 0 };
+
+char command_message[COMMAND_HEIGHT][COMMAND_WIDTH];
+char command_message_frontbuf[COMMAND_HEIGHT][COMMAND_WIDTH] = { 0 };
+char command_message_backbuf[COMMAND_HEIGHT][COMMAND_WIDTH] = { 0 };
 
 
 // 출력할 내용들의 좌상단(topleft) 좌표
@@ -38,6 +45,12 @@ void display_cursor(CURSOR cursor);
 void display_status();
 void init_status();
 void insert_status_message(const char* message);
+void init_system_message();
+void display_system_message();
+void insert_system_message(const char* message);
+void init_command();
+void display_command();
+void insert_command_message(const char* message);
 void display(
 	RESOURCE resource,
 	char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH],
@@ -46,9 +59,9 @@ void display(
 	display_resource(resource);
 	display_map(map);
 	display_cursor(cursor);
-	// display_system_message()
+	display_system_message();
 	display_status();
-	// display_commands()
+	display_command();
 	// ...
 }
 
@@ -145,7 +158,7 @@ void init_status() {
 				}
 				else {
 					// 내부는 공백으로 채움
-					status_window[i][j] = ' ';
+					status_window[i][j] = -1;
 				}
 			}
 		}
@@ -194,12 +207,123 @@ void insert_status_message(const char* message) {
 	for (int i = 0; i < message_length; i++) {
 		status_window[STATUS_HEIGHT - 2][i + 1] = message[i];  // 좌측의 1 칸을 공백으로 두고 입력
 	}
-	//// 나머지는 공백으로 초기화
-	//for (int i = message_length; i < STATUS_WIDTH; i++) {
-	//	status_window[STATUS_HEIGHT - 2][i + 1] = ' ';
-	//}
+	
 }
 
+void init_system_message() {
+	// 상태창 테두리 설정
+	for (int i = 0; i < SYSTEM_MESSAGE_HEIGHT; i++) {
+		for (int j = 0; j < SYSTEM_MESSAGE_WIDTH; j++) {
+			// 상단, 하단, 좌우 테두리
+			if (i == 0 || i == SYSTEM_MESSAGE_HEIGHT - 1 || j == 0 || j == SYSTEM_MESSAGE_WIDTH - 1) {
+				system_message[i][j] = '#';  // 상태창 테두리 '#'
+			}
+			else {
+				// 내부는 공백으로 채움
+				system_message[i][j] = -1;
+			}
+		}
+	}
+
+}
+
+void display_system_message() {
+	// 상태창을 한 번에 출력, 변경된 부분만 갱신
+	for (int i = 0; i < SYSTEM_MESSAGE_HEIGHT; i++) {
+		for (int j = 0; j < SYSTEM_MESSAGE_WIDTH; j++) {
+
+			if (system_message[i][j] >= 0) {
+				system_message_backbuf[i][j] = system_message[i][j];
+			}
+		}
+	}
 
 
+	for (int i = 0; i < SYSTEM_MESSAGE_HEIGHT; i++) {
+		for (int j = 0; j < SYSTEM_MESSAGE_WIDTH; j++) {
+			if (system_message_frontbuf[i][j] != system_message_backbuf[i][j]) {
+				POSITION pos = { i + 21, j};
+				printc(pos, system_message_backbuf[i][j], COLOR_DEFAULT);  // 상태창에 색상 적용
+			}
+			system_message_frontbuf[i][j] = system_message_backbuf[i][j];  // 변경된 부분만 갱신된 상태로 저장
+		}
+	}
 
+
+}
+
+void insert_system_message(const char* message) {
+	// 상태창이 꽉 차면, 맨 위의 메시지를 제거하고 나머지 메시지를 위로 밀기
+	for (int i = 1; i + 1 < SYSTEM_MESSAGE_HEIGHT - 1; i++) {
+		// 각 줄을 한 줄씩 위로 밀어냄
+		memcpy(system_message[i], system_message[i + 1], SYSTEM_MESSAGE_WIDTH);
+	}
+
+	// 새로운 메시지 추가 (맨 밑에)
+	int message_length = strlen(message);
+	// 메시지가 상태창의 너비보다 길면 자르기
+	if (message_length > SYSTEM_MESSAGE_WIDTH - 2) {  // 양쪽 테두리를 고려해 2칸 줄임
+		message_length = SYSTEM_MESSAGE_WIDTH - 2;
+	}
+	// 새로운 메시지를 맨 아래 줄에 추가
+	for (int i = 0; i < message_length; i++) {
+		system_message[SYSTEM_MESSAGE_HEIGHT - 2][i + 1] = message[i];  // 좌측의 1 칸을 공백으로 두고 입력
+	}
+}
+
+void init_command() {
+	// 명령창 테두리 설정
+	for (int i = 0; i < COMMAND_HEIGHT; i++) {
+		for (int j = 0; j < COMMAND_WIDTH; j++) {
+			// 상단, 하단, 좌우 테두리
+			if (i == 0 || i == COMMAND_HEIGHT - 1 || j == 0 || j == COMMAND_WIDTH - 1) {
+				command_message[i][j] = '#';  // 명령창 테두리 '#'
+			}
+			else {
+				// 내부는 공백으로 채움
+				command_message[i][j] = -1;
+			}
+		}
+	}
+}
+
+void display_command() {
+	// 명령창을 한 번에 출력, 변경된 부분만 갱신
+	for (int i = 0; i < COMMAND_HEIGHT; i++) {
+		for (int j = 0; j < COMMAND_WIDTH; j++) {
+			if (command_message[i][j] >= 0) {
+				command_message_backbuf[i][j] = command_message[i][j];
+			}
+		}
+	}
+
+	for (int i = 0; i < COMMAND_HEIGHT; i++) {
+		for (int j = 0; j < COMMAND_WIDTH; j++) {
+			if (command_message_frontbuf[i][j] != command_message_backbuf[i][j]) {
+				POSITION pos = { i + 21, j + 61 };
+				printc(pos, command_message_backbuf[i][j], COLOR_DEFAULT);  // 명령창에 색상 적용
+			}
+			command_message_frontbuf[i][j] = command_message_backbuf[i][j];  // 변경된 부분만 갱신된 상태로 저장
+		}
+	}
+}
+
+void insert_command_message(const char* message) {
+	// 명령창이 꽉 차면, 맨 위의 메시지를 제거하고 나머지 메시지를 위로 밀기
+	for (int i = 1; i + 1 < COMMAND_HEIGHT - 1; i++) {
+		// 각 줄을 한 줄씩 위로 밀어냄
+		memcpy(command_message[i], command_message[i + 1], COMMAND_WIDTH);
+	}
+
+	// 새로운 메시지 추가 (맨 밑에)
+	int message_length = strlen(message);
+	// 메시지가 명령창의 너비보다 길면 자르기
+	if (message_length > COMMAND_WIDTH - 2) {
+		message_length = COMMAND_WIDTH - 2;
+	}
+	// 새로운 메시지를 맨 아래 줄에 추가
+	for (int i = 0; i < message_length; i++) {
+		command_message[COMMAND_HEIGHT - 2][i + 1] = message[i];  // 좌측의 1 칸을 공백으로 두고 입력
+	}
+
+}

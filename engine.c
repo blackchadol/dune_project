@@ -19,7 +19,8 @@
 1-14 createBuilding 함수제작 -> layer 0에 건물 설계 
 1-15 create sandworm, spice 함수제작, startObject ㅅ함수를 만들어서 게임 초기상태 표시
 1-16 상태창 생성 및 display_status 함수 생성 및 
-insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력  
+insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
+1-17. 똑같은 방식으로 시스템메시지, 명령창 제작 및 문자열 입력 함수 제작
 
 2-1 커서가 지형위를 지나갈 때 커서색으로 바뀌고 커서가 지나가면 다시 지형색으로 돌아오도록 코드수정. 
 2-2 방향키를 연속으로 두번 눌렀을 때 3칸 씩 움직이도록 cursur_move 및 main 함수 수정
@@ -82,11 +83,13 @@ int main(void) {
 
 	init();
 	init_status();
+	init_system_message();
+	init_command();
 	intro();
     init_colorMap();
 	startObject();
 	display(resource, map, cursor);
-	//insert_status_message("test text.");
+	
 	while (1) {
 		// loop 돌 때마다(즉, TICK==10ms마다) 키 입력 확인
 		KEY key = get_key();
