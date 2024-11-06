@@ -7,14 +7,29 @@
 #define COLOR_ROCK     0x7F   // 기타 지형 색상 (회색)
 #define COLOR_SPICE    0xdF   // 스파이스 색상 (보라색)
 #define COLOR_PLATE    0x8F   // 장판 색상 (검은색)
-//typedef struct {
-//	int size; // 표시할 객체가 2x2인지, 1x1인지
-//	int color; // 표시할 캐릭터의 색상.
-//	POSITION coordinate; // 표시할 캐릭터의 좌표
-//	char ch; // 어떤 캐릭터를 표시할것인지. 
-//}OBJECT_LOCATION;
-//
-//OBJECT_LOCATION sample_object_create = { 1, 0x1F,{10,10},'B' };
+
+// ======================   해당 위치에 있는 객체를 찾기 위해, 객체가 어떤 타입인지 검사하기 위한 선언 ===========//
+typedef enum {
+	OBJECT_NONE,
+	OBJECT_UNIT,
+	OBJECT_BUILDING,
+	OBJECT_SPICE,
+	OBJECT_SANDWORM,
+	OBJECT_ROCK,  // 추가된 바위 타입
+} ObjectType;
+
+typedef struct {
+	ObjectType type;  // 객체의 타입 (유닛, 건물, 스파이스, 샌드웜 등)
+	void* object;     // 해당 객체의 포인터 (유닛, 건물, 스파이스, 샌드웜 등)
+} ObjectInfo;
+// =========rock의 개수나 위치는 변하지 않을 것이기 때문에 상수로 선언=============//
+const POSITION rock_positions[10] = {  // 2x2 바위는 4개의 좌표를 차지하므로 4배 크기
+	{10, 30}, {10, 31}, {11, 30}, {11, 31}, // 바위 1 (2x2)
+	{5, 15}, {5, 16}, {6, 15}, {6, 16},   // 바위 2 (2x2)
+	{8, 42}, // 바위 3 (1x1)
+	{15, 13} // 바위 4 (1x1)
+};
+
 
 //========6개의 유닛의 속성을 정의하는 구조체 및 상수 배열 추가=========//
 //== 유닛의 정보가 필요할 때 가져다 쓰기 위한 구조=======//
@@ -113,6 +128,7 @@ const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES] = {
 typedef struct {
 	int type; // 건물유형 인덱스
 	int durability; // 내구도
+	POSITION position;
 	struct BUILDING* next;
 }BUILDING;
 
@@ -120,6 +136,7 @@ typedef struct {
 	POSITION position;
 	int move_period;
 	int attack_period;
+	struct SANDWORM* next;
 
 }SANDWORM;  // 샌드웜 구조체 추가.
 

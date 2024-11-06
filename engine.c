@@ -24,6 +24,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 
 2-1 커서가 지형위를 지나갈 때 커서색으로 바뀌고 커서가 지나가면 다시 지형색으로 돌아오도록 코드수정. 
 2-2 방향키를 연속으로 두번 눌렀을 때 3칸 씩 움직이도록 cursur_move 및 main 함수 수정
+2-3. 스페이스바를 눌렀을 때 모든 오브젝트 연결리스트를 검사하여 해당위치에 있는 오브젝트 타입을 enum으로 선언하여 반환하는 함수작성. 
 */
 
 
@@ -50,9 +51,9 @@ void startObject();
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
 BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
 POSITION sample_obj_next_position(void);
-SANDWORM createSandworm(POSITION pos);
+SANDWORM* createSandworm(POSITION pos, SANDWORM* head);
 SPICE* createSpice(int amount, POSITION pos, SPICE* head);
-
+ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
 
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
@@ -113,6 +114,10 @@ int main(void) {
 			case k_quit: outro();
 			case k_none:
 			case k_undef:
+			case k_space: {
+
+			}
+
 			default: break;
 			}
 		}
@@ -358,18 +363,29 @@ BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, Factio
 		return head;
 	}
 
+	new_building->position = pos;
 	new_building->type = type; // 빌딩 유형
 	new_building->durability = attributes->durability; // 내구도 초기화 (비용으로 설정)
 	new_building->next = head; // 현재 리스트의 맨 앞에 추가
 
 	displayUnit(map, pos, color, 2, 0, attributes->symbol);
+	return new_building;
 
 }
 
-SANDWORM createSandworm(POSITION pos) {
+SANDWORM* createSandworm(POSITION pos, SANDWORM* head) {
+	SANDWORM* new_sandworm = (SANDWORM*)malloc(sizeof(SANDWORM));
+	if (new_sandworm == NULL) {
+		fprintf(stderr, "Memory allocation failed\n");
+		return NULL;
+	}
 	SANDWORM sandworm = { pos, 2500, 10000 };
+	new_sandworm->move_period = 2500;
+	new_sandworm->attack_period = 10000;
+	new_sandworm->position = pos;
+	new_sandworm->next = head;
 	displayUnit(map, pos, COLOR_SANDWORM, 1, 1, 'W');
-	return sandworm;
+	return new_sandworm;
 }
 
 SPICE* createSpice(int howMuch, POSITION pos, SPICE* head) {
@@ -383,6 +399,7 @@ SPICE* createSpice(int howMuch, POSITION pos, SPICE* head) {
 	new_spice->next = head;
 	char symbol = new_spice->amount + '0';
 	displayUnit(map, pos, COLOR_SPICE, 1, 0, symbol);
+	return new_spice;
 
 }
 
@@ -402,9 +419,9 @@ void startObject() {
 	SPICE* spice = NULL;
 	spice = createSpice(5, (POSITION) { 12, 1 }, spice);
 	spice = createSpice(5, (POSITION) { 5, 58 }, spice);
-
-	SANDWORM sandworm1 = createSandworm((POSITION) { 5, 10 });
-	SANDWORM sandworm2 = createSandworm((POSITION) { 11, 40 });
+	SANDWORM* sandworm = NULL;
+	sandworm = createSandworm((POSITION) { 5, 10 },sandworm);
+	sandworm = createSandworm((POSITION) { 11, 40 },sandworm);
 
 
 	////====== 돌 그리기 ============///
@@ -414,4 +431,70 @@ void startObject() {
 	displayUnit(map, (POSITION) { 8, 42}, COLOR_ROCK, 1, 0, 'R');
 	displayUnit(map, (POSITION) { 15, 13 }, COLOR_ROCK, 1, 0, 'R');
 
+}
+
+
+
+ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
+	ObjectInfo result = { OBJECT_NONE, NULL };  // 기본값은 아무 것도 없음
+
+	// 1. 바위 검사: 바위는 상수로 지정된 위치에서 검사
+	for (int i = 0; i < 10; i++) {
+		if (rock_positions[i].row == pos.row && rock_positions[i].column == pos.column) {
+			result.type = OBJECT_ROCK;
+			return result;  // 해당 위치에 바위가 있으면 바로 반환
+		}
+	}
+
+	// 2. 유닛 검사
+	Unit* currentUnit = units;
+	while (currentUnit != NULL) {
+		if (currentUnit->pos.row == pos.row && currentUnit->pos.column == pos.column) {
+			result.type = OBJECT_UNIT;
+			result.object = currentUnit;  // 해당 유닛 포인터 반환
+			return result;
+		}
+		currentUnit = currentUnit->next;
+	}
+
+	// 3. 건물 검사
+	BUILDING* currentBuilding = buildings;
+	while (currentBuilding != NULL) {
+		// 건물은 크기에 따라 여러 좌표를 차지할 수 있으므로, 건물의 모든 좌표를 체크
+		for (int i = 0; i < NUM_BUILDING_TYPES; i++) {
+			BuildingAttributes buildingAttr = BUILDINGATTRIBUTES[i];
+
+			if (pos.row >= currentBuilding->position.row && pos.row < currentBuilding->position.row + 2 &&
+				pos.column >= currentBuilding->position.column && pos.column < currentBuilding->position.column + 2) {
+				result.type = OBJECT_BUILDING;
+				result.object = currentBuilding;  // 해당 건물 포인터 반환
+				return result;
+			}
+		}
+		currentBuilding = currentBuilding->next;
+	}
+
+	// 4. 스파이스 검사
+	SPICE* currentSpice = spices;
+	while (currentSpice != NULL) {
+		if (currentSpice->position.row == pos.row && currentSpice->position.column == pos.column) {
+			result.type = OBJECT_SPICE;
+			result.object = currentSpice;  // 해당 스파이스 포인터 반환
+			return result;
+		}
+		currentSpice = currentSpice->next;
+	}
+
+	// 5. 샌드웜 검사
+	SANDWORM* currentSandworm = sandworms;
+	while (currentSandworm != NULL) {
+		if (currentSandworm->position.row == pos.row && currentSandworm->position.column == pos.column) {
+			result.type = OBJECT_SANDWORM;
+			result.object = currentSandworm;  // 해당 샌드웜 포인터 반환
+			return result;
+		}
+		currentSandworm = currentSandworm->next;
+	}
+
+	return result;  // 모든 검사에서 해당하지 않으면 OBJECT_NONE 반환
 }
