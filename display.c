@@ -122,7 +122,7 @@ void display_cursor(CURSOR cursor) {
 	POSITION curr = cursor.current;
 
 	char ch = frontbuf[prev.row][prev.column];
-	printc(padd(map_pos, prev), ch, COLOR_DEFAULT);
+	printc(padd(map_pos, prev), ch, colorMap[prev.row][prev.column]);
 
 	ch = frontbuf[curr.row][curr.column];
 	printc(padd(map_pos, curr), ch, COLOR_CURSOR);
