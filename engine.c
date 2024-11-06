@@ -20,6 +20,7 @@
 1-15 create sandworm, spice 함수제작, startObject ㅅ함수를 만들어서 게임 초기상태 표시
 
 2-1 커서가 지형위를 지나갈 때 커서색으로 바뀌고 커서가 지나가면 다시 지형색으로 돌아오도록 코드수정. 
+2-2 방향키를 연속으로 두번 눌렀을 때 3칸 씩 움직이도록 cursur_move 및 main 함수 수정
 */
 
 
@@ -32,10 +33,15 @@
 #include "display.h"
 #include "object.h"
 
+
+#define DOUBLE_PRESS_INTERVAL 300  // 두 번 입력 간의 최대 시간 간격 (밀리초)
+#define MOVE_STEP_SINGLE 1         // 기본 이동 칸 수
+#define MOVE_STEP_DOUBLE 3         // 두 번 입력 시 이동 칸 수
+
 void init(void);
 void intro(void);
 void outro(void);
-void cursor_move(DIRECTION dir);
+void cursor_move(DIRECTION dir, int steps);
 void sample_obj_move(void);
 void startObject();
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
@@ -48,7 +54,8 @@ SPICE* createSpice(int amount, POSITION pos, SPICE* head);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
-
+clock_t last_key_time = 0;          // 마지막 키 입력 시간
+KEY last_key = k_none;              // 마지막으로 눌린 키 값
 
 /* ================= game data =================== */
 char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH] = { 0 };
@@ -79,9 +86,19 @@ int main(void) {
 	while (1) {
 		// loop 돌 때마다(즉, TICK==10ms마다) 키 입력 확인
 		KEY key = get_key();
+		int steps = 1;
+		
 		// 키 입력이 있으면 처리
 		if (is_arrow_key(key)) {
-			cursor_move(ktod(key));
+			clock_t current_time = clock();
+			// 같은 키가 짧은 시간 간격 내에 두 번 입력된 경우
+			if (key == last_key && (current_time - last_key_time) * 1000 / CLOCKS_PER_SEC <= DOUBLE_PRESS_INTERVAL) {
+				steps = 3;  // 두 번 빠르게 입력 시 3칸 이동
+			}
+			cursor_move(ktod(key),steps);
+			// 현재 키와 시간을 기록하여 다음 입력과 비교
+			last_key = key;
+			last_key_time = current_time;
 		}
 		else {
 			// 방향키 외의 입력
@@ -162,16 +179,28 @@ void init(void) {
 }
 
 // (가능하다면) 지정한 방향으로 커서 이동
-void cursor_move(DIRECTION dir) {
+void cursor_move(DIRECTION dir, int steps) {
+
 	POSITION curr = cursor.current;
-	POSITION new_pos = pmove(curr, dir);
+	POSITION new_pos = curr;
+	if (steps == 3)
+	{
+		for (int i = 0; i < 3; i++) {
+			new_pos = pmove(new_pos, dir);
+		}
+	}
+	else {
+		new_pos = pmove(curr, dir);
+	}
 
 	// validation check
+
 	if (1 <= new_pos.row && new_pos.row <= MAP_HEIGHT - 2 && \
 		1 <= new_pos.column && new_pos.column <= MAP_WIDTH - 2) {
 
 		cursor.previous = cursor.current;
 		cursor.current = new_pos;
+
 	}
 }
 
