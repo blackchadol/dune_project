@@ -296,7 +296,7 @@ void init_command() {
 			}
 			else {
 				// 내부는 공백으로 채움
-				command_message[i][j] = -1;
+				command_message[i][j] = ' ';
 			}
 		}
 	}

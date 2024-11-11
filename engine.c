@@ -26,6 +26,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 2-2 방향키를 연속으로 두번 눌렀을 때 3칸 씩 움직이도록 cursur_move 및 main 함수 수정
 2-3. 스페이스바를 눌렀을 때 모든 오브젝트 연결리스트를 검사하여 해당위치에 있는 오브젝트 타입을 enum으로 선언하여 반환하는 함수작성. 
 2-4. 스페이스바를 눌렀을 때 상태창 및 명령어 출력 구현
+2-5. esc 키 입력시 상태창 및 명령창 초기화 구현
 */
 
 
@@ -125,6 +126,10 @@ int main(void) {
 			case k_space: {
 				handleSpacebarPress(cursor.current, units, buildings, spice, sandworm );
 				break;
+			}
+			case k_esc: {
+				init_status();      
+				init_command();     
 			}
 
 			default: break;
