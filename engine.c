@@ -28,6 +28,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 2-4. 스페이스바를 눌렀을 때 상태창 및 명령어 출력 구현
 2-5. esc 키 입력시 상태창 및 명령창 초기화 구현
 3. SANDWORM 행동구현. readme.md에 추가설명
+4. 스페이스바를 눌렀을 때 건물의 명령어를 표시하고 명령어를 입력받아 유닛을 생성하는 함수 작성
 */
 
 
@@ -62,6 +63,8 @@ void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildin
 Unit* findClosestUnit(POSITION current_pos, Unit* units);
 void updateSandwormBehavior(SANDWORM* sandworm, Unit** units, SPICE** spices, BUILDING* buildings);
 void removeUnit(Unit** units, Unit* targetUnit);
+void buildingCommandProcess(char command);
+char getBuildingCommand(char command);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -85,6 +88,11 @@ OBJECT_SAMPLE obj = {
 	.next_move_time = 300
 };
 
+Unit* units = NULL; // 객체 연결리스트 초기화
+BUILDING* buildings = NULL;
+SPICE* spice = NULL;
+SANDWORM* sandworm = NULL;
+
 /* ================= main() =================== */
 int main(void) {
 	srand((unsigned int)time(NULL));
@@ -95,10 +103,10 @@ int main(void) {
 	init_command();
 	intro();
     init_colorMap();
-	Unit* units = NULL; // 객체 연결리스트 초기화
-	BUILDING* buildings = NULL;
-	SPICE* spice = NULL;
-	SANDWORM* sandworm = NULL;
+	//Unit* units = NULL; // 객체 연결리스트 초기화
+	//BUILDING* buildings = NULL;
+	//SPICE* spice = NULL;
+	//SANDWORM* sandworm = NULL;
 	startObject(&units,&buildings,&spice,&sandworm);
 	display(resource, map, cursor);
 	insert_status_message("%d",&units->pos.row);
@@ -539,8 +547,19 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 		else {
 			insert_status_message("Durability: %d\n\n", building->durability);
 		}
+		// 명령관련 함수인데 일단 여기에 넣었음. 연결리스트에 아군인지, 적군인지 포함이 안되어있어서 우선 조건을 이렇게 써놓고 추후에 연결리스트에 아군, 적군 여부 추가. 
 		insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
+		display(resource, map, cursor);
+		
+		if (BUILDINGATTRIBUTES[building->type].faction == FACTION_PLAYER || BUILDINGATTRIBUTES[building->type].faction == FACTION_COMMON) 
+		{
+			char command = getBuildingCommand(BUILDINGATTRIBUTES[building->type].command);
+			buildingCommandProcess(command);
+
+		}
 		break;
+
+
 	}
 	case OBJECT_SPICE:
 	{
@@ -568,6 +587,9 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
 	// 커서 위치에서 오브젝트 정보 출력
 	displayObjectInfoAtPosition(cursorPosition, units, buildings, spices, sandworms);
+
+
+
 }
 
 // 샌드웜이 이동할 때 가장 가까운 유닛을 찾는 함수
@@ -640,7 +662,7 @@ void updateSandwormBehavior(SANDWORM* sandworm, Unit** units, SPICE** spices, BU
 			if (closestUnit->pos.row == sandworm->position.row && closestUnit->pos.column == sandworm->position.column) {
 				// 유닛을 제거
 				removeUnit(units, closestUnit);
-				insert_status_message("A Sandworm has eaten a unit!\n");
+				insert_system_message("A Sandworm has eaten a unit!\n");
 			}
 		}
 	}
@@ -656,7 +678,7 @@ void updateSandwormBehavior(SANDWORM* sandworm, Unit** units, SPICE** spices, BU
 		// 스파이스 표시
 		map[0][spicePos.row][spicePos.column] = spiceAmount + '0';  // 숫자로 표시
 		setColor(spicePos, COLOR_SPICE);  // 색상 설정
-		insert_status_message("A Sandworm has released some Spice!\n");
+		insert_system_message("A Sandworm has released some Spice!\n");
 	}
 }
 
@@ -686,4 +708,60 @@ void removeUnit(Unit** head, Unit* target) {
 		current = current->next;
 	}
 	return;
+}
+
+
+
+///     ============   명령어를 받는 함수 ========== /// 
+// 1. 건물의 명령어
+
+void buildingCommandProcess(char command) {
+	// 여기에 건물 옆에 생성할 수 있는 공간 검증 함수
+	// 공간검증을 통한 생성할 유닛의 position 계산
+	
+	switch (command) {
+	case 'H': {
+		units = createUnit(0, (POSITION) { 14, 2 }, units, FACTION_PLAYER); // 플레이어 유닛 생성, 샘플위치 1기 생산
+		insert_system_message("A new harvester ready.");
+		return;
+		break;
+	}
+
+	case 'q': {
+		init_command();
+		init_status();
+		return;
+	}
+
+	default: {
+		// 기타 처리할 부분
+		break;
+	}
+	}
+
+
+}
+
+char getBuildingCommand(char command) {
+
+	while (1) {
+		char key = _getch();  // 키 입력 받기
+		if (key == k_none) {
+			continue;
+		}
+		if (key == command) {
+			return command;
+		}
+		else if (key == 27) {
+			
+			insert_system_message("quit");
+			display(resource, map, cursor);
+			return 'q';
+		}
+		else {
+			insert_system_message("unavailable input");
+			display(resource, map, cursor);
+		}
+
+	}
 }
