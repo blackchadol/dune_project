@@ -36,8 +36,8 @@ void displayUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos, int set
 void init_colorMap();
 
 void init_status();
-void insert_status_message(const char* message);
+void insert_status_message(const char* format, ...);
 void init_system_message();
-void insert_system_message(const char* message);
+void insert_system_message(const char* format, ...);
 void init_command();
-void insert_command_message(const char* message);
+void insert_command_message(const char* format, ...);

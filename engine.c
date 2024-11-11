@@ -25,6 +25,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 2-1 커서가 지형위를 지나갈 때 커서색으로 바뀌고 커서가 지나가면 다시 지형색으로 돌아오도록 코드수정. 
 2-2 방향키를 연속으로 두번 눌렀을 때 3칸 씩 움직이도록 cursur_move 및 main 함수 수정
 2-3. 스페이스바를 눌렀을 때 모든 오브젝트 연결리스트를 검사하여 해당위치에 있는 오브젝트 타입을 enum으로 선언하여 반환하는 함수작성. 
+2-4. 스페이스바를 눌렀을 때 상태창 및 명령어 출력 구현
 */
 
 
@@ -47,14 +48,15 @@ void intro(void);
 void outro(void);
 void cursor_move(DIRECTION dir, int steps);
 void sample_obj_move(void);
-void startObject();
+void startObject(Unit** units, BUILDING** buildings, SPICE** spice, SANDWORM** sandworm);
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
 BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
 POSITION sample_obj_next_position(void);
 SANDWORM* createSandworm(POSITION pos, SANDWORM* head);
 SPICE* createSpice(int amount, POSITION pos, SPICE* head);
 ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
-
+void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -88,9 +90,13 @@ int main(void) {
 	init_command();
 	intro();
     init_colorMap();
-	startObject();
+	Unit* units = NULL; // 객체 연결리스트 초기화
+	BUILDING* buildings = NULL;
+	SPICE* spice = NULL;
+	SANDWORM* sandworm = NULL;
+	startObject(&units,&buildings,&spice,&sandworm);
 	display(resource, map, cursor);
-	
+	insert_status_message("%d",&units->pos.row);
 	while (1) {
 		// loop 돌 때마다(즉, TICK==10ms마다) 키 입력 확인
 		KEY key = get_key();
@@ -113,24 +119,18 @@ int main(void) {
 			switch (key) {
 			case k_quit: outro();
 			case k_none:
+				break;
 			case k_undef:
+				break;
 			case k_space: {
-
+				handleSpacebarPress(cursor.current, units, buildings, spice, sandworm );
+				break;
 			}
 
 			default: break;
 			}
 		}
 
-		// 샘플 오브젝트 동작
-		//sample_obj_move();
-		//Unit* units = NULL; // 유닛 리스트 초기화
-		//units = createUnit(0, (POSITION) { 10, 10 }, units, FACTION_PLAYER); // 플레이어 유닛 생성
-
-		//BUILDING* buildings = NULL;
-		//buildings = createBuilding(0, (POSITION) { 3, 5 }, buildings, FACTION_PLAYER);
-
-		// 화면 출력
 		
 		display(resource, map, cursor);
 		Sleep(TICK);
@@ -404,24 +404,24 @@ SPICE* createSpice(int howMuch, POSITION pos, SPICE* head) {
 }
 
 
-void startObject() {
-	Unit* units = NULL; // 유닛 리스트 초기화
-	units = createUnit(0, (POSITION) { 14, 1 }, units, FACTION_PLAYER); // 플레이어 유닛 생성
-	units = createUnit(0, (POSITION) { 3, 58 }, units, FACTION_ENEMY); // 플레이어 유닛 생성
-	BUILDING* buildings = NULL;
-	buildings = createBuilding(1, (POSITION) { 15, 1 }, buildings, FACTION_PLAYER);
-	buildings = createBuilding(0, (POSITION) { 15, 1 }, buildings, FACTION_PLAYER);
-	buildings = createBuilding(1, (POSITION) { 15, 3 }, buildings, FACTION_PLAYER);
+void startObject(Unit** units, BUILDING** buildings, SPICE** spice, SANDWORM** sandworm ) {
 
-	buildings = createBuilding(1, (POSITION) { 1, 57 }, buildings, FACTION_ENEMY);
-	buildings = createBuilding(0, (POSITION) { 1, 57 }, buildings, FACTION_ENEMY);
+	*units = createUnit(0, (POSITION) { 14, 1 }, *units, FACTION_PLAYER); // 플레이어 유닛 생성
+	*units = createUnit(0, (POSITION) { 3, 58 }, *units, FACTION_ENEMY); // 플레이어 유닛 생성
+	
+	*buildings = createBuilding(1, (POSITION) { 15, 1 }, *buildings, FACTION_PLAYER);
+	*buildings = createBuilding(0, (POSITION) { 15, 1 }, *buildings, FACTION_PLAYER);
+	*buildings = createBuilding(1, (POSITION) { 15, 3 }, *buildings, FACTION_PLAYER);
 
-	SPICE* spice = NULL;
-	spice = createSpice(5, (POSITION) { 12, 1 }, spice);
-	spice = createSpice(5, (POSITION) { 5, 58 }, spice);
-	SANDWORM* sandworm = NULL;
-	sandworm = createSandworm((POSITION) { 5, 10 },sandworm);
-	sandworm = createSandworm((POSITION) { 11, 40 },sandworm);
+	*buildings = createBuilding(1, (POSITION) { 1, 57 }, *buildings, FACTION_ENEMY);
+	*buildings = createBuilding(0, (POSITION) { 1, 57 }, *buildings, FACTION_ENEMY);
+	*buildings = createBuilding(1, (POSITION) { 1, 55 }, * buildings, FACTION_ENEMY);
+	
+	*spice = createSpice(5, (POSITION) { 12, 1 }, *spice);
+	*spice = createSpice(5, (POSITION) { 5, 58 }, *spice);
+	
+	*sandworm = createSandworm((POSITION) { 5, 10 },*sandworm);
+	*sandworm = createSandworm((POSITION) { 11, 40 },*sandworm);
 
 
 	////====== 돌 그리기 ============///
@@ -497,4 +497,60 @@ ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 	}
 
 	return result;  // 모든 검사에서 해당하지 않으면 OBJECT_NONE 반환
+}
+
+// 커서의 위치를 인자로 받아 해당 위치의 오브젝트 정보 출력하는 함수
+void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
+	ObjectInfo objInfo = checkObjectAtPosition(pos, units, buildings, spices, sandworms);
+
+	// 오브젝트 타입에 따라 정보 출력
+	switch (objInfo.type) {
+	case OBJECT_UNIT:
+	{
+		Unit* unit = (Unit*)objInfo.object;
+		insert_status_message("Unit Type: %s\n", unitTypeToString(unit->type));
+		insert_status_message("Health: %d\n\n", unit->health);
+		insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
+		break;
+	}
+	case OBJECT_BUILDING:
+	{
+		BUILDING* building = (BUILDING*)objInfo.object;
+		
+		insert_status_message("Building Type: %s\n", buildingTypeToString(building->type));
+		if (building->durability < 0) {
+			insert_status_message("Durability: nononono\n\n");
+		}
+		else {
+			insert_status_message("Durability: %d\n\n", building->durability);
+		}
+		insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
+		break;
+	}
+	case OBJECT_SPICE:
+	{
+		SPICE* spice = (SPICE*)objInfo.object;
+		insert_status_message("Type: SPICE\n");
+		insert_status_message("Spice Amount: %d\n\n", spice->amount);
+		break;
+	}
+	case OBJECT_SANDWORM:
+	{
+		SANDWORM* sandworm = (SANDWORM*)objInfo.object;
+		insert_status_message("Type: SANDWORM\n\n");
+		break;
+	}
+	case OBJECT_ROCK:
+		insert_status_message("Type: ROCK\n\n");
+		break;
+	default:
+		insert_status_message("desert\n\n", pos.row, pos.column);
+		break;
+	}
+}
+
+// 스페이스바를 눌렀을 때, 현재 커서 좌표에 해당하는 오브젝트 정보를 출력하는 함수
+void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
+	// 커서 위치에서 오브젝트 정보 출력
+	displayObjectInfoAtPosition(cursorPosition, units, buildings, spices, sandworms);
 }

@@ -7,6 +7,7 @@
 
 #include "display.h"
 #include "io.h"
+#include <stdarg.h>
 
 int colorMap [MAP_HEIGHT][MAP_WIDTH]; // 각 레이어의 색상 초기화
 void init_colorMap() {
@@ -44,13 +45,13 @@ void display_map(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 void display_cursor(CURSOR cursor);
 void display_status();
 void init_status();
-void insert_status_message(const char* message);
+void insert_status_message(const char* format, ...);
 void init_system_message();
 void display_system_message();
-void insert_system_message(const char* message);
+void insert_system_message(const char* format, ...);
 void init_command();
 void display_command();
-void insert_command_message(const char* message);
+void insert_command_message(const char* format, ...);
 void display(
 	RESOURCE resource,
 	char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH],
@@ -99,15 +100,10 @@ void displayUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos, int set
 		// 2x2 크기 유닛
 		if (pos.row < MAP_HEIGHT - 1 && pos.column < MAP_WIDTH - 1) {
 			map[layer][pos.row][pos.column] = displayChar; // 좌측 상단 표시
-			if (displayChar == 'R') {
-				map[layer][pos.row + 1][pos.column] = displayChar; // 아래쪽 칸 비우기
-				map[layer][pos.row][pos.column + 1] = displayChar; // 우측 칸 비우기
-				map[layer][pos.row + 1][pos.column + 1] = displayChar; // 우측 하단 비우기
-			}
-			else {
-				map[layer][pos.row + 1][pos.column] = '.'; // 아래쪽 칸 비우기
-				map[layer][pos.row][pos.column + 1] = '.'; // 우측 칸 비우기
-				map[layer][pos.row + 1][pos.column + 1] = '.'; // 우측 하단 비우기
+			map[layer][pos.row + 1][pos.column] = '.'; // 아래쪽 칸 비우기
+			map[layer][pos.row][pos.column + 1] = '.'; // 우측 칸 비우기
+			map[layer][pos.row + 1][pos.column + 1] = '.'; // 우측 하단 비우기
+			
 			}
 			for (int i = 0; i < 2; i++) {
 				for (int j = 0; j < 2; j++) {
@@ -117,7 +113,7 @@ void displayUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos, int set
 	
 
 		}
-	}
+	
 	else { // size == 1
 		// 1x1 크기 유닛
 		if (pos.row < MAP_HEIGHT && pos.column < MAP_WIDTH) {
@@ -157,6 +153,8 @@ void display_cursor(CURSOR cursor) {
 }
 
 void init_status() {
+	// 상태창 배열 초기화 (공백 문자로 초기화)
+
 		// 상태창 테두리 설정
 		for (int i = 0; i < STATUS_HEIGHT; i++) {
 			for (int j = 0; j < STATUS_WIDTH; j++) {
@@ -166,7 +164,7 @@ void init_status() {
 				}
 				else {
 					// 내부는 공백으로 채움
-					status_window[i][j] = -1;
+					status_window[i][j] = ' ';
 				}
 			}
 		}
@@ -187,6 +185,7 @@ void display_status() {
 
 	for (int i = 0; i < STATUS_HEIGHT; i++) {
 		for (int j = 0; j < STATUS_WIDTH; j++) {
+			
 			if (status_frontbuf[i][j] != status_backbuf[i][j]) {
 				POSITION pos = { i + 1, j + 60 };
 				printc(pos, status_backbuf[i][j], COLOR_DEFAULT);  // 상태창에 색상 적용
@@ -198,25 +197,30 @@ void display_status() {
 	
 }
 
-void insert_status_message(const char* message) {
+// 상태창에 메시지를 삽입하는 함수
+void insert_status_message(const char* format, ...) {
+	va_list args;
+	va_start(args, format);
+
 	// 상태창이 꽉 차면, 맨 위의 메시지를 제거하고 나머지 메시지를 위로 밀기
-	for (int i = 1; i + 1 < STATUS_HEIGHT - 1; i++) {
+	for (int i = 1; i  < STATUS_HEIGHT - 1; i++) {
 		// 각 줄을 한 줄씩 위로 밀어냄
-		memcpy(status_window[i], status_window[i+1], STATUS_WIDTH);
+		memcpy(status_window[i], status_window[i + 1], STATUS_WIDTH);
 	}
+	memset(status_window[STATUS_HEIGHT - 2], ' ', STATUS_WIDTH);
 
 	// 새로운 메시지 추가 (맨 밑에)
-	int message_length = strlen(message);
-	// 메시지가 상태창의 너비보다 길면 자르기
-	if (message_length > STATUS_WIDTH) {
-		message_length = STATUS_WIDTH;
+	int message_length = vsnprintf(status_window[STATUS_HEIGHT - 2], STATUS_WIDTH - 1, format, args);
+	va_end(args);
+
+	// 메시지 끝 이후 남은 공간을 공백으로 채우기
+	if (message_length < STATUS_WIDTH-2 ) {
+		memset(&status_window[STATUS_HEIGHT - 2][message_length], ' ', STATUS_WIDTH-1 - message_length-1);
 	}
-	// 새로운 메시지를 맨 아래 줄에 추가
-	for (int i = 0; i < message_length; i++) {
-		status_window[STATUS_HEIGHT - 2][i + 1] = message[i];  // 좌측의 1 칸을 공백으로 두고 입력
-	}
-	
 }
+
+	//va_end(args);  // 가변 인자 목록 처리 끝
+
 
 void init_system_message() {
 	// 상태창 테두리 설정
@@ -228,13 +232,13 @@ void init_system_message() {
 			}
 			else {
 				// 내부는 공백으로 채움
-				system_message[i][j] = -1;
+				system_message[i][j] = ' ';
 			}
 		}
 	}
 
 }
-
+	
 void display_system_message() {
 	// 상태창을 한 번에 출력, 변경된 부분만 갱신
 	for (int i = 0; i < SYSTEM_MESSAGE_HEIGHT; i++) {
@@ -260,24 +264,27 @@ void display_system_message() {
 
 }
 
-void insert_system_message(const char* message) {
-	// 상태창이 꽉 차면, 맨 위의 메시지를 제거하고 나머지 메시지를 위로 밀기
+void insert_system_message(const char* format, ...) {
+	va_list args;
+	va_start(args, format);  // 가변 인자 목록 시작
+
+	// 시스템 메시지창이 꽉 차면, 맨 위의 메시지를 제거하고 나머지 메시지를 위로 밀기
 	for (int i = 1; i + 1 < SYSTEM_MESSAGE_HEIGHT - 1; i++) {
 		// 각 줄을 한 줄씩 위로 밀어냄
 		memcpy(system_message[i], system_message[i + 1], SYSTEM_MESSAGE_WIDTH);
 	}
 
 	// 새로운 메시지 추가 (맨 밑에)
-	int message_length = strlen(message);
-	// 메시지가 상태창의 너비보다 길면 자르기
-	if (message_length > SYSTEM_MESSAGE_WIDTH - 2) {  // 양쪽 테두리를 고려해 2칸 줄임
-		message_length = SYSTEM_MESSAGE_WIDTH - 2;
-	}
-	// 새로운 메시지를 맨 아래 줄에 추가
-	for (int i = 0; i < message_length; i++) {
-		system_message[SYSTEM_MESSAGE_HEIGHT - 2][i + 1] = message[i];  // 좌측의 1 칸을 공백으로 두고 입력
+	int message_length = vsnprintf(system_message[SYSTEM_MESSAGE_HEIGHT - 2], SYSTEM_MESSAGE_WIDTH - 1, format, args);
+
+	va_end(args);  // 가변 인자 목록 처리 끝
+
+	// 메시지 끝 이후 남은 공간을 공백으로 채우기
+	if (message_length < SYSTEM_MESSAGE_WIDTH - 2) {
+		memset(&system_message[SYSTEM_MESSAGE_HEIGHT - 2][message_length], ' ', SYSTEM_MESSAGE_WIDTH - 1 - message_length);
 	}
 }
+
 
 void init_command() {
 	// 명령창 테두리 설정
@@ -316,7 +323,10 @@ void display_command() {
 	}
 }
 
-void insert_command_message(const char* message) {
+void insert_command_message(const char* format, ...) {
+	va_list args;
+	va_start(args, format);  // 가변 인자 목록 시작
+
 	// 명령창이 꽉 차면, 맨 위의 메시지를 제거하고 나머지 메시지를 위로 밀기
 	for (int i = 1; i + 1 < COMMAND_HEIGHT - 1; i++) {
 		// 각 줄을 한 줄씩 위로 밀어냄
@@ -324,14 +334,12 @@ void insert_command_message(const char* message) {
 	}
 
 	// 새로운 메시지 추가 (맨 밑에)
-	int message_length = strlen(message);
-	// 메시지가 명령창의 너비보다 길면 자르기
-	if (message_length > COMMAND_WIDTH - 2) {
-		message_length = COMMAND_WIDTH - 2;
-	}
-	// 새로운 메시지를 맨 아래 줄에 추가
-	for (int i = 0; i < message_length; i++) {
-		command_message[COMMAND_HEIGHT - 2][i + 1] = message[i];  // 좌측의 1 칸을 공백으로 두고 입력
-	}
+	int message_length = vsnprintf(command_message[COMMAND_HEIGHT - 2], COMMAND_WIDTH - 1, format, args);
 
+	va_end(args);  // 가변 인자 목록 처리 끝
+
+	// 메시지 끝 이후 남은 공간을 공백으로 채우기
+	if (message_length < COMMAND_WIDTH - 2) {
+		memset(&command_message[COMMAND_HEIGHT - 2][message_length], ' ', COMMAND_WIDTH - 1 - message_length);
+	}
 }

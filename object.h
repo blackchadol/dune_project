@@ -1,5 +1,10 @@
 #include <stdio.h>
 #include "common.h"
+
+const char* unitTypeToString(int type);
+const char* buildingTypeToString(int type);
+
+
 // 맵에 객체를 표시하기 위한 색상 정의, 필요에 따라 색상 임의 변경함//
 #define COLOR_FRIENDLY 0x9F   // 아군 배경 색상 (파란색)
 #define COLOR_ENEMY    0xCF   // 적군 배경 색상 (빨간색)
@@ -23,12 +28,9 @@ typedef struct {
 	void* object;     // 해당 객체의 포인터 (유닛, 건물, 스파이스, 샌드웜 등)
 } ObjectInfo;
 // =========rock의 개수나 위치는 변하지 않을 것이기 때문에 상수로 선언=============//
-const POSITION rock_positions[10] = {  // 2x2 바위는 4개의 좌표를 차지하므로 4배 크기
-	{10, 30}, {10, 31}, {11, 30}, {11, 31}, // 바위 1 (2x2)
-	{5, 15}, {5, 16}, {6, 15}, {6, 16},   // 바위 2 (2x2)
-	{8, 42}, // 바위 3 (1x1)
-	{15, 13} // 바위 4 (1x1)
-};
+
+
+
 
 
 //========6개의 유닛의 속성을 정의하는 구조체 및 상수 배열 추가=========//
@@ -64,13 +66,7 @@ typedef struct {
 }UnitAttributes; // 유닛의 고정속성을 정의하는 
 
 /* 유닛 속성 중 없음 = -1 으로 표현함*/
-const UnitAttributes UNIT_ATTRIBUTES[NUM_UNIT_TYPES] = {
-	{HARVESTER,5,5,2000, -1, -1, 70,0, {'H','M'}, 'H',FACTION_COMMON},
-	{FREMEN,5,2,400,15,200,25,8,{'M','P'}, 'F',FACTION_PLAYER},
-	{SOILDIER,1,1,1000,5,800,15,1,{'M','P'}, 'S',FACTION_PLAYER},
-	{PROJECTION,1,1,1200,6,600,10,1,{'M','P'}, 'P',FACTION_ENEMY},
-	{TANK,12,5,3000,40,4000,60,4,{'M','P'}, 'T',FACTION_ENEMY}
-};
+
 //// 색상 구분을 위해 색상 경우의 수를 열거형으로 선언//
 //typedef enum {
 //	UNIT_TYPE_FRIENDLY, // 아군 유닛
@@ -113,16 +109,7 @@ typedef struct {
 	FactionType faction;
 }BuildingAttributes;
 
-const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES] = {
-	{BASE, 0,50, 'H','B',FACTION_COMMON},
-	{PLATE, 1,-1, -1,'P',FACTION_COMMON},
-	{DORMITORY,2,10,-1,'D',FACTION_COMMON},
-	{GARAGE,4,10,-1,'G',FACTION_COMMON},
-	{BARRACKS,4,20,'S','B',FACTION_PLAYER},
-	{SHELTER,5,30,'F','S',FACTION_PLAYER},
-	{ARENA,3,15,'F','A',FACTION_ENEMY},
-	{FACTORY,5,30,'T','F',FACTION_ENEMY}
-};
+
 
 //=== 건물도 연결리스트로 관리하기 위한 구조체 선언========?/////////
 typedef struct {
@@ -161,3 +148,8 @@ typedef struct {
 //		return COLOR_TERRAIN; // 기본 색상 (회색)
 //	}
 //}
+
+// 변수 선언 (실제 정의는 object.c에서만 이루어짐)
+extern const POSITION rock_positions[10];
+extern const UnitAttributes UNIT_ATTRIBUTES[NUM_UNIT_TYPES];
+extern const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES];
