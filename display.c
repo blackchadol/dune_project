@@ -52,6 +52,7 @@ void insert_system_message(const char* format, ...);
 void init_command();
 void display_command();
 void insert_command_message(const char* format, ...);
+void setColor(POSITION pos, int color);
 void display(
 	RESOURCE resource,
 	char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH],
@@ -342,4 +343,9 @@ void insert_command_message(const char* format, ...) {
 	if (message_length < COMMAND_WIDTH - 2) {
 		memset(&command_message[COMMAND_HEIGHT - 2][message_length], ' ', COMMAND_WIDTH - 1 - message_length);
 	}
+}
+
+
+void setColor(POSITION pos , int color) {
+	colorMap[pos.row][pos.column] = color;
 }

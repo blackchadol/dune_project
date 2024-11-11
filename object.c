@@ -1,6 +1,8 @@
 
-
+#include "common.h"
 #include "object.h"
+
+Unit* removeUnit(Unit* units, Unit* targetUnit);
 
 // =========rock의 개수나 위치는 변하지 않을 것이기 때문에 상수로 선언=============//
 const POSITION rock_positions[10] = {  // 2x2 바위는 4개의 좌표를 차지하므로 4배 크기
@@ -55,3 +57,4 @@ const char* buildingTypeToString(int type) {
     default: return "UNKNOWN_BUILDING_TYPE";
     }
 }
+

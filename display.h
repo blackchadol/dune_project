@@ -41,3 +41,4 @@ void init_system_message();
 void insert_system_message(const char* format, ...);
 void init_command();
 void insert_command_message(const char* format, ...);
+void setColor(POSITION pos, int color);
