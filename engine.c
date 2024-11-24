@@ -21,6 +21,7 @@
 1-16 상태창 생성 및 display_status 함수 생성 및 
 insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 1-17. 똑같은 방식으로 시스템메시지, 명령창 제작 및 문자열 입력 함수 제작
+1-18. 시스템메시지, 상태창, 명령창을 출력시 테두리 char '#'이 삭제되는 문제해결
 
 2-1 커서가 지형위를 지나갈 때 커서색으로 바뀌고 커서가 지나가면 다시 지형색으로 돌아오도록 코드수정. 
 2-2 방향키를 연속으로 두번 눌렀을 때 3칸 씩 움직이도록 cursur_move 및 main 함수 수정
@@ -29,6 +30,8 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 2-5. esc 키 입력시 상태창 및 명령창 초기화 구현
 3. SANDWORM 행동구현. readme.md에 추가설명
 4. 스페이스바를 눌렀을 때 건물의 명령어를 표시하고 명령어를 입력받아 유닛을 생성하는 함수 작성
+
+
 */
 
 
@@ -40,7 +43,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 #include "io.h"
 #include "display.h"
 #include "object.h"
-
+#include <ctype.h>
 
 #define DOUBLE_PRESS_INTERVAL 300  // 두 번 입력 간의 최대 시간 간격 (밀리초)
 #define MOVE_STEP_SINGLE 1         // 기본 이동 칸 수
@@ -109,7 +112,7 @@ int main(void) {
 	//SANDWORM* sandworm = NULL;
 	startObject(&units,&buildings,&spice,&sandworm);
 	display(resource, map, cursor);
-	insert_status_message("%d",&units->pos.row);
+	//insert_status_message("%d",&units->pos.row);
 	while (1) {
 		SANDWORM* current = sandworm;
 		while (current != NULL) {
@@ -752,12 +755,16 @@ char getBuildingCommand(char command) {
 		if (key == command) {
 			return command;
 		}
+		else if (key == tolower(command)) {
+			return toupper(command);
+		}
 		else if (key == 27) {
 			
 			insert_system_message("quit");
 			display(resource, map, cursor);
 			return 'q';
 		}
+
 		else {
 			insert_system_message("unavailable input");
 			display(resource, map, cursor);
