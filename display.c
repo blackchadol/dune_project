@@ -328,7 +328,7 @@ void display_command() {
 void insert_command_message(const char* format, ...) {
 	va_list args;
 	va_start(args, format); // 가변 인자 목록 시작
-
+	char buffer[COMMAND_WIDTH * 2]; // 너비보다 넉넉한 크기 설정
 	// 명령창이 꽉 차면, 내부 메시지만 위로 밀기
 	for (int i = 1; i < COMMAND_HEIGHT - 2; i++) {
 		memcpy(&command_message[i][1], &command_message[i + 1][1], COMMAND_WIDTH - 2);

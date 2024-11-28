@@ -19,10 +19,10 @@
 #define STATUS_HEIGHT 18
 
 #define SYSTEM_MESSAGE_WIDTH 60
-#define SYSTEM_MESSAGE_HEIGHT 5
+#define SYSTEM_MESSAGE_HEIGHT 9
 
 #define COMMAND_WIDTH 40
-#define COMMAND_HEIGHT 5
+#define COMMAND_HEIGHT 9
 
 // 지금은 자원, 맵, 커서만 표시
 // 앞으로 화면에 표시할 내용들 여기에 추가하기

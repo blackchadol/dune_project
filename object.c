@@ -87,7 +87,7 @@ int countCanCreateBuilding(RESOURCE resource) {
 }
 
 
-BuildingType* listCanCreateBuilding(RESOURCE resource) {
+BuildingType* listCanCreateBuilding(RESOURCE resource, bool firstcall) {
     int count = 0;
 
     // 동적으로 메모리 할당 (최대 건물 개수)
@@ -114,11 +114,14 @@ BuildingType* listCanCreateBuilding(RESOURCE resource) {
             continue;
         }
 
-        // 건물이 건설 가능함을 표시
-        insert_command_message("%c: %s ",
-            attr->symbol,
-            buildingTypeToString(attr->type)
-        );
+        if (firstcall) // 첫번째 함수 호출일때만 명령창에 입력. 
+            // 건물이 건설 가능함을 표시
+        {
+            insert_command_message("%c: %s ",
+                attr->symbol,
+                buildingTypeToString(attr->type)
+            );
+        }
 
         // 건물 유형 추가
         canCreateBuildingList[count] = attr->type;
@@ -160,8 +163,8 @@ int getCreateBuildingCmd(int user_input, BuildingType* canCreateList, int count)
 }
 
 
-void buildStateAct(int userInput, POSITION cursor, RESOURCE resource, int* buildingEnum) {
-    BuildingType* canBuildList = listCanCreateBuilding(resource);
+void buildStateAct(int userInput, POSITION cursor, RESOURCE resource, int* buildingEnum,bool firstCall) {
+    BuildingType* canBuildList = listCanCreateBuilding(resource, firstCall);
     int count = countCanCreateBuilding(resource);
     *buildingEnum = getCreateBuildingCmd(userInput, canBuildList, count);
 }

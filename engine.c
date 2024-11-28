@@ -33,6 +33,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 5 시스템 메시지는 1에서 구현
 6-1. main에서 키입력을 상황별로 받기 위해 GAMESTATE enum선언 및 switch case 문으로 관리
 6-2. 명령창에 B키를 default로 출력하고 B키를 입력하면 건설 가능한 건물 목록 출력 및 단축기로 선택 및 ESC시 취소 구현
+6-3. 명령창 크기 및 시스템 메시지 창 크기 늘리기(높이 9로) 및 첫함수호출 bool 변수를 만들어서 첫 호출시에만 명령창에 출력하는걸로 수정. 
 */
 
 
@@ -117,6 +118,7 @@ int main(void) {
 	//insert_status_message("%d",&units->pos.row);
 	bool isBcommand = false;
 	bool isSpaceTrigger = false;
+	bool firstCall = true;
 	GameState gameState = STATE_DEFAULT;
 	int user_input = 0;
 	int buildingEnum = -1;
@@ -179,13 +181,15 @@ int main(void) {
 					gameState = STATE_DEFAULT;
 				}
 				else {
-					buildStateAct(user_input, cursor.current, resource, &buildingEnum);
+					buildStateAct(user_input, cursor.current, resource, &buildingEnum,firstCall);
+					firstCall = false;
 				}
 
 				if (buildingEnum > 0) {
 					gameState = STATE_BUILD_SPACE;
 					init_command();
 					insert_status_message("build %s", buildingTypeToString(buildingEnum));
+					firstCall = true;
 				}
 			
 				// void buildStateAct(int user_input, pos cusrsurpos, RESOURCE resource, int* BuildingEnum)

@@ -154,6 +154,6 @@ typedef struct {
 extern const POSITION rock_positions[10];
 extern const UnitAttributes UNIT_ATTRIBUTES[NUM_UNIT_TYPES];
 extern const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES];
-BuildingType* listCanCreateBuilding(RESOURCE resource);
+BuildingType* listCanCreateBuilding(RESOURCE resource, bool firtsCall);
 int getCreateBuildingCmd(int user_input, BuildingType* canCreateList, int count);
-void buildStateAct(int userInput, POSITION cursor, RESOURCE resource, int* buildingEnum);
+void buildStateAct(int userInput, POSITION cursor, RESOURCE resource, int* buildingEnum, bool fisrtCall);
