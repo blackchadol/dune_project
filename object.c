@@ -155,7 +155,7 @@ int getCreateBuildingCmd(int user_input, BuildingType* canCreateList, int count)
                     return (int)attr->type; // 유효한 빌딩 타입 반환
                 }
             }
-            break; // 입력 명령어는 존재하지만 건설 불가
+            //break; // 입력 명령어는 존재하지만 건설 불가
         }
     }
 

@@ -34,6 +34,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 6-1. main에서 키입력을 상황별로 받기 위해 GAMESTATE enum선언 및 switch case 문으로 관리
 6-2. 명령창에 B키를 default로 출력하고 B키를 입력하면 건설 가능한 건물 목록 출력 및 단축기로 선택 및 ESC시 취소 구현
 6-3. 명령창 크기 및 시스템 메시지 창 크기 늘리기(높이 9로) 및 첫함수호출 bool 변수를 만들어서 첫 호출시에만 명령창에 출력하는걸로 수정. 
+6-4. 메인루프 전 bool is_cursor_2x2 = false;를 선언함으로써 cursur_move, display_cursor함수를 2x2로 출력할 수 있게 구현 및 STATE_BUILD 상태에서 B 명령어가 base 명령어랑 겹쳐서 barracks를 설치 못하는 버그수정.
 */
 
 
@@ -55,7 +56,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 void init(void);
 void intro(void);
 void outro(void);
-void cursor_move(DIRECTION dir, int steps);
+void cursor_move(DIRECTION dir, int steps, bool is_cursor_2x2);
 void sample_obj_move(void);
 void startObject(Unit** units, BUILDING** buildings, SPICE** spice, SANDWORM** sandworm);
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
@@ -114,7 +115,8 @@ int main(void) {
 	//SPICE* spice = NULL;
 	//SANDWORM* sandworm = NULL;
 	startObject(&units, &buildings, &spice, &sandworm);
-	display(resource, map, cursor);
+	bool is_cursor_2x2 = false;
+	display(resource, map, cursor,is_cursor_2x2);
 	//insert_status_message("%d",&units->pos.row);
 	bool isBcommand = false;
 	bool isSpaceTrigger = false;
@@ -140,7 +142,7 @@ int main(void) {
 			if (key == last_key && (current_time - last_key_time) * 1000 / CLOCKS_PER_SEC <= DOUBLE_PRESS_INTERVAL) {
 				steps = 3;  // 두 번 빠르게 입력 시 3칸 이동
 			}
-			cursor_move(ktod(key), steps);
+			cursor_move(ktod(key), steps,is_cursor_2x2);
 			// 현재 키와 시간을 기록하여 다음 입력과 비교
 			last_key = key;
 			last_key_time = current_time;
@@ -176,6 +178,7 @@ int main(void) {
 				break;
 			}
 			case STATE_BUILD: {
+				user_input = 66;
 				if (user_input == ESCBYTE) {
 					init_command();
 					gameState = STATE_DEFAULT;
@@ -192,22 +195,18 @@ int main(void) {
 					firstCall = true;
 				}
 			
-				// void buildStateAct(int user_input, pos cusrsurpos, RESOURCE resource, int* BuildingEnum)
-				// int getCreateBuildingCmd(user_input, BuildingType* cancreateBuildingList)(
-				// BuildingType*(enum 배열) canCreateBuiding (resource, pos, count)
-				// int countCanCreate (resource, pos)
-				// 대충 cancreatebList* = canCreateBuilding 
-				// int BuildingEnum(while문 전에 -1로 선언), 
-				// BuildingEnum = getCreateBuildingCmd(user_input, BuildingType* cancreateBuildingList)(잘못된 입력이면 -1 반환)
-				// if(BuildingEnum >= 0)
-				//		gameState = STATE_BUILD_SPACE;
-				// 
 				
 			}
 				break;
 			case STATE_SPACE:
 				break;
-			case STATE_BUILD_SPACE:
+			case STATE_BUILD_SPACE: {
+				is_cursor_2x2 = true;
+				if (user_input == SPACEBYTE) {
+					
+
+				}
+			}
 				break;
 			default: break;
 
@@ -215,7 +214,7 @@ int main(void) {
 			}
 
 
-			display(resource, map, cursor);
+			display(resource, map, cursor, is_cursor_2x2);
 			Sleep(TICK);
 			sys_clock += 10;
 		}
@@ -276,7 +275,7 @@ void init(void) {
 }
 
 // (가능하다면) 지정한 방향으로 커서 이동
-void cursor_move(DIRECTION dir, int steps) {
+void cursor_move(DIRECTION dir, int steps, bool is_cursor_2x2) {
 
 	POSITION curr = cursor.current;
 	POSITION new_pos = curr;
@@ -291,13 +290,22 @@ void cursor_move(DIRECTION dir, int steps) {
 	}
 
 	// validation check
-
-	if (1 <= new_pos.row && new_pos.row <= MAP_HEIGHT - 2 && \
-		1 <= new_pos.column && new_pos.column <= MAP_WIDTH - 2) {
-
-		cursor.previous = cursor.current;
-		cursor.current = new_pos;
-
+	// 경계 확인 및 제한
+	if (is_cursor_2x2) {
+		// 2x2 커서의 경우: 오른쪽/아래로 1칸씩 여유 공간 필요
+		if (1 <= new_pos.row && new_pos.row <= MAP_HEIGHT - 3 &&
+			1 <= new_pos.column && new_pos.column <= MAP_WIDTH - 3) {
+			cursor.previous = cursor.current;
+			cursor.current = new_pos;
+		}
+	}
+	else {
+		// 1x1 커서의 경우: 경계 그대로 확인
+		if (1 <= new_pos.row && new_pos.row <= MAP_HEIGHT - 2 &&
+			1 <= new_pos.column && new_pos.column <= MAP_WIDTH - 2) {
+			cursor.previous = cursor.current;
+			cursor.current = new_pos;
+		}
 	}
 }
 
@@ -611,7 +619,7 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 		}
 		// 명령관련 함수인데 일단 여기에 넣었음. 연결리스트에 아군인지, 적군인지 포함이 안되어있어서 우선 조건을 이렇게 써놓고 추후에 연결리스트에 아군, 적군 여부 추가. 
 		insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
-		display(resource, map, cursor);
+		//display(resource, map, cursor);
 		
 		if (BUILDINGATTRIBUTES[building->type].faction == FACTION_PLAYER || BUILDINGATTRIBUTES[building->type].faction == FACTION_COMMON) 
 		{
@@ -820,13 +828,13 @@ char getBuildingCommand(char command) {
 		else if (key == 27) {
 			
 			insert_system_message("quit");
-			display(resource, map, cursor);
+			//display(resource, map, cursor, );
 			return 'q';
 		}
 
 		else {
 			insert_system_message("unavailable input");
-			display(resource, map, cursor);
+			//display(resource, map, cursor);
 		}
 
 	}
