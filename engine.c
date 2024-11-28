@@ -29,9 +29,10 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 2-4. 스페이스바를 눌렀을 때 상태창 및 명령어 출력 구현
 2-5. esc 키 입력시 상태창 및 명령창 초기화 구현
 3. SANDWORM 행동구현. readme.md에 추가설명
-4. 스페이스바를 눌렀을 때 건물의 명령어를 표시하고 명령어를 입력받아 유닛을 생성하는 함수 작성
-
-
+4-1 스페이스바를 눌렀을 때 건물의 명령어를 표시하고 명령어를 입력받아 유닛을 생성하는 함수 작성
+5 시스템 메시지는 1에서 구현
+6-1. main에서 키입력을 상황별로 받기 위해 GAMESTATE enum선언 및 switch case 문으로 관리
+6-2. 명령창에 B키를 default로 출력하고 B키를 입력하면 건설 가능한 건물 목록 출력 및 단축기로 선택 및 ESC시 취소 구현
 */
 
 
@@ -44,6 +45,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 #include "display.h"
 #include "object.h"
 #include <ctype.h>
+#include <stdbool.h>
 
 #define DOUBLE_PRESS_INTERVAL 300  // 두 번 입력 간의 최대 시간 간격 (밀리초)
 #define MOVE_STEP_SINGLE 1         // 기본 이동 칸 수
@@ -77,10 +79,10 @@ KEY last_key = k_none;              // 마지막으로 눌린 키 값
 /* ================= game data =================== */
 char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH] = { 0 };
 RESOURCE resource = {
-	.spice = 0,
-	.spice_max = 0,
-	.population = 0,
-	.population_max = 0
+	.spice = 20,
+	.spice_max = 20,
+	.population = 20,
+	.population_max = 20
 };
 
 OBJECT_SAMPLE obj = {
@@ -105,14 +107,19 @@ int main(void) {
 	init_system_message();
 	init_command();
 	intro();
-    init_colorMap();
+	init_colorMap();
 	//Unit* units = NULL; // 객체 연결리스트 초기화
 	//BUILDING* buildings = NULL;
 	//SPICE* spice = NULL;
 	//SANDWORM* sandworm = NULL;
-	startObject(&units,&buildings,&spice,&sandworm);
+	startObject(&units, &buildings, &spice, &sandworm);
 	display(resource, map, cursor);
 	//insert_status_message("%d",&units->pos.row);
+	bool isBcommand = false;
+	bool isSpaceTrigger = false;
+	GameState gameState = STATE_DEFAULT;
+	int user_input = 0;
+	int buildingEnum = -1;
 	while (1) {
 		SANDWORM* current = sandworm;
 		while (current != NULL) {
@@ -120,9 +127,10 @@ int main(void) {
 			current = current->next;  // 리스트에서 다음 샌드웜으로 이동
 		}
 		// loop 돌 때마다(즉, TICK==10ms마다) 키 입력 확인
-		KEY key = get_key();
+		user_input = getInputKey();
+		KEY key = get_key(user_input);
 		int steps = 1;
-		
+
 		// 키 입력이 있으면 처리
 		if (is_arrow_key(key)) {
 			clock_t current_time = clock();
@@ -130,7 +138,7 @@ int main(void) {
 			if (key == last_key && (current_time - last_key_time) * 1000 / CLOCKS_PER_SEC <= DOUBLE_PRESS_INTERVAL) {
 				steps = 3;  // 두 번 빠르게 입력 시 3칸 이동
 			}
-			cursor_move(ktod(key),steps);
+			cursor_move(ktod(key), steps);
 			// 현재 키와 시간을 기록하여 다음 입력과 비교
 			last_key = key;
 			last_key_time = current_time;
@@ -141,25 +149,72 @@ int main(void) {
 			case k_quit: outro();
 			case k_none:
 				break;
-			case k_undef:
+			case k_undef: 
 				break;
-			case k_space: {
-				handleSpacebarPress(cursor.current, units, buildings, spice, sandworm );
-				break;
-			}
-			case k_esc: {
-				init_status();      
-				init_command();     
-			}
-
 			default: break;
 			}
-		}
 
-		
-		display(resource, map, cursor);
-		Sleep(TICK);
-		sys_clock += 10;
+			switch (gameState) {
+			case STATE_DEFAULT:
+			{
+				if (!isBcommand) {
+					insert_command_message("B:Build");
+					isBcommand = true;
+				}
+				if ((char)user_input == 'B') {
+					init_command();
+					gameState = STATE_BUILD;
+				}
+				if (user_input == SPACEBYTE) {
+					gameState = STATE_SPACE;
+					init_command();
+				}
+					
+
+				break;
+			}
+			case STATE_BUILD: {
+				if (user_input == ESCBYTE) {
+					init_command();
+					gameState = STATE_DEFAULT;
+				}
+				else {
+					buildStateAct(user_input, cursor.current, resource, &buildingEnum);
+				}
+
+				if (buildingEnum > 0) {
+					gameState = STATE_BUILD_SPACE;
+					init_command();
+					insert_status_message("build %s", buildingTypeToString(buildingEnum));
+				}
+			
+				// void buildStateAct(int user_input, pos cusrsurpos, RESOURCE resource, int* BuildingEnum)
+				// int getCreateBuildingCmd(user_input, BuildingType* cancreateBuildingList)(
+				// BuildingType*(enum 배열) canCreateBuiding (resource, pos, count)
+				// int countCanCreate (resource, pos)
+				// 대충 cancreatebList* = canCreateBuilding 
+				// int BuildingEnum(while문 전에 -1로 선언), 
+				// BuildingEnum = getCreateBuildingCmd(user_input, BuildingType* cancreateBuildingList)(잘못된 입력이면 -1 반환)
+				// if(BuildingEnum >= 0)
+				//		gameState = STATE_BUILD_SPACE;
+				// 
+				
+			}
+				break;
+			case STATE_SPACE:
+				break;
+			case STATE_BUILD_SPACE:
+				break;
+			default: break;
+
+
+			}
+
+
+			display(resource, map, cursor);
+			Sleep(TICK);
+			sys_clock += 10;
+		}
 	}
 }
 
@@ -671,7 +726,7 @@ void updateSandwormBehavior(SANDWORM* sandworm, Unit** units, SPICE** spices, BU
 	}
 
 	// 일정 시간마다 스파이스 배설 여부를 체크 (배설 주기는 랜덤)
-	if (rand() % 100 < 30) {
+	if (rand() % 100 < 20) {
 		int spiceAmount = rand() % 9 + 1;  // 랜덤 스파이스 양 (1~9)
 		//POSITION spicePos = sandworm->position;  // 현재 위치에 스파이스 배설
 

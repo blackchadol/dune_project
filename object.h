@@ -3,6 +3,7 @@
 
 const char* unitTypeToString(int type);
 const char* buildingTypeToString(int type);
+int countCanCreateBuilding(RESOURCE resource);
 
 
 // 맵에 객체를 표시하기 위한 색상 정의, 필요에 따라 색상 임의 변경함//
@@ -153,3 +154,6 @@ typedef struct {
 extern const POSITION rock_positions[10];
 extern const UnitAttributes UNIT_ATTRIBUTES[NUM_UNIT_TYPES];
 extern const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES];
+BuildingType* listCanCreateBuilding(RESOURCE resource);
+int getCreateBuildingCmd(int user_input, BuildingType* canCreateList, int count);
+void buildStateAct(int userInput, POSITION cursor, RESOURCE resource, int* buildingEnum);

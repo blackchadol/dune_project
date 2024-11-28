@@ -13,6 +13,9 @@
 #define N_LAYER 2
 #define MAP_WIDTH	60
 #define MAP_HEIGHT	18
+#define SPACEBYTE 32
+#define ESCBYTE 27
+
 
 typedef struct {
 	char character;
@@ -38,6 +41,7 @@ typedef enum {
 	// k_none: 입력된 키가 없음. d_stay(안 움직이는 경우)에 대응
 	k_none = 0, k_up, k_right, k_left, k_down,
 	k_quit, k_space, k_esc,
+	k_command,
 	k_undef, // 정의되지 않은 키 입력	
 } KEY;
 
@@ -96,5 +100,13 @@ typedef struct {
 	int next_move_time;	// 다음에 움직일 시간
 	int speed;
 } OBJECT_SAMPLE;
+
+typedef enum {
+	STATE_DEFAULT,    // 기본 상태
+	STATE_SPACE,      // 스페이스바 상태
+	STATE_BUILD,     // 빌드 상태(B를 누른 상태)
+	STATE_BUILD_SPACE // 빌드 상태에서 스페이스를 대기하는 상태
+} GameState;
+
 
 #endif
