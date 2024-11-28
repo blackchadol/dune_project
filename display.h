@@ -30,7 +30,8 @@ void display(
 	RESOURCE resource,
 	char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH],
 	CURSOR cursor,
-	bool is_cursor_2x2
+	bool is_cursor_2x2,
+	bool was_cursor_2x2
 );
 void displayUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos, int setColor, int size, int layer, char displayChar);
 #endif
@@ -46,3 +47,4 @@ void setColor(POSITION pos, int color);
 void display_system_message();
 void display_status();
 void display_command();
+void display_cursor(CURSOR cursor, bool is_cursor_2x2, bool was_cursor_2x2);

@@ -42,7 +42,7 @@ char frontbuf[MAP_HEIGHT][MAP_WIDTH] = { 0 };
 void project(char src[N_LAYER][MAP_HEIGHT][MAP_WIDTH], char dest[MAP_HEIGHT][MAP_WIDTH]);
 void display_resource(RESOURCE resource);
 void display_map(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
-void display_cursor(CURSOR cursor, bool is_cursor_2x2);
+void display_cursor(CURSOR cursor, bool is_cursor_2x2, bool was_cursor_2x2);
 void display_status();
 void init_status();
 void insert_status_message(const char* format, ...);
@@ -57,11 +57,12 @@ void display(
 	RESOURCE resource,
 	char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH],
 	CURSOR cursor,
-	bool is_cursor_2x2)
+	bool is_cursor_2x2,
+	bool was_cursor_2x2)
 {
 	display_resource(resource);
 	display_map(map);
-	display_cursor(cursor, is_cursor_2x2);
+	display_cursor(cursor, is_cursor_2x2,was_cursor_2x2);
 	display_system_message();
 	display_status();
 	display_command();
@@ -144,49 +145,66 @@ void display_map(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
 
 // frontbuf[][]에서 커서 위치의 문자를 색만 바꿔서 그대로 다시 출력
 // 2x2 커서 표시 함수
-void display_cursor(CURSOR cursor, bool is_cursor_2x2) {
-	POSITION prev = cursor.previous;
-	POSITION curr = cursor.current;
+void display_cursor(CURSOR cursor, bool is_cursor_2x2, bool was_cursor_2x2) {
+	POSITION prev = cursor.previous;  // 이전 커서 위치
+	POSITION curr = cursor.current;  // 현재 커서 위치
 
-	// 기존 커서 영역 복구 (1x1 또는 2x2 모두 지원)
-	if (is_cursor_2x2) {
-		// 2x2 커서 지우기
-		for (int i = 0; i < 2; i++) {
-			for (int j = 0; j < 2; j++) {
-				POSITION prev_cell = { prev.row + i, prev.column + j };
-				if (prev_cell.row < MAP_HEIGHT && prev_cell.column < MAP_WIDTH) {
-					char ch = frontbuf[prev_cell.row][prev_cell.column];
-					printc(padd(map_pos, prev_cell), ch, colorMap[prev_cell.row][prev_cell.column]);
-				}
-			}
-		}
-	}
-	else {
-		// 기존 1x1 커서 복구
-		char ch = frontbuf[prev.row][prev.column];
-		printc(padd(map_pos, prev), ch, colorMap[prev.row][prev.column]);
-	}
-
-	// 새로운 커서 출력
-	if (is_cursor_2x2) {
-		// 2x2 커서 표시
+	// [1] 기존 커서 영역 복구
+	if (was_cursor_2x2) {
+		// 이전 커서가 2x2였을 경우
 		for (int i = 0; i < 2; i++) {
 			for (int j = 0; j < 2; j++) {
 				POSITION curr_cell = { curr.row + i, curr.column + j };
 				if (curr_cell.row < MAP_HEIGHT && curr_cell.column < MAP_WIDTH) {
 					char ch = frontbuf[curr_cell.row][curr_cell.column];
-					printc(padd(map_pos, curr_cell), ch, COLOR_CURSOR);
+					int color = colorMap[curr_cell.row][curr_cell.column]; // 해당 칸의 원래 색상
+					printc(padd(map_pos, curr_cell), ch, color);
+				}
+			}
+		}
+	}
+
+	if (is_cursor_2x2) {
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 2; j++) {
+				POSITION prev_cell = { prev.row + i, prev.column + j };
+				if (prev_cell.row < MAP_HEIGHT && prev_cell.column < MAP_WIDTH) {
+					char ch = frontbuf[prev_cell.row][prev_cell.column]; // 원래 문자
+					int color = colorMap[prev_cell.row][prev_cell.column]; // 원래 색상
+					printc(padd(map_pos, prev_cell), ch, color); // 복구
+				}
+			}
+		}
+	}
+		// 이전 커서가 1x1일 경우
+		if (prev.row < MAP_HEIGHT && prev.column < MAP_WIDTH) {
+			char ch = frontbuf[prev.row][prev.column];
+			int color = colorMap[prev.row][prev.column]; // 해당 칸의 원래 색상
+			printc(padd(map_pos, prev), ch, color);
+		}
+	
+
+	// [2] 새로운 커서 출력
+	if (is_cursor_2x2) {
+		// 현재 커서가 2x2일 경우
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 2; j++) {
+				POSITION curr_cell = { curr.row + i, curr.column + j };
+				if (curr_cell.row < MAP_HEIGHT && curr_cell.column < MAP_WIDTH) {
+					char ch = frontbuf[curr_cell.row][curr_cell.column];
+					printc(padd(map_pos, curr_cell), ch, COLOR_CURSOR); // 커서 색상으로 표시
 				}
 			}
 		}
 	}
 	else {
-		// 기존 1x1 커서 표시
-		char ch = frontbuf[curr.row][curr.column];
-		printc(padd(map_pos, curr), ch, COLOR_CURSOR);
+		// 현재 커서가 1x1일 경우
+		if (curr.row < MAP_HEIGHT && curr.column < MAP_WIDTH) {
+			char ch = frontbuf[curr.row][curr.column];
+			printc(padd(map_pos, curr), ch, COLOR_CURSOR); // 커서 색상으로 표시
+		}
 	}
 }
-
 void init_status() {
 	// 상태창 배열 초기화 (공백 문자로 초기화)
 

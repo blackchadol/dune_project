@@ -35,6 +35,8 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 6-2. 명령창에 B키를 default로 출력하고 B키를 입력하면 건설 가능한 건물 목록 출력 및 단축기로 선택 및 ESC시 취소 구현
 6-3. 명령창 크기 및 시스템 메시지 창 크기 늘리기(높이 9로) 및 첫함수호출 bool 변수를 만들어서 첫 호출시에만 명령창에 출력하는걸로 수정. 
 6-4. 메인루프 전 bool is_cursor_2x2 = false;를 선언함으로써 cursur_move, display_cursor함수를 2x2로 출력할 수 있게 구현 및 STATE_BUILD 상태에서 B 명령어가 base 명령어랑 겹쳐서 barracks를 설치 못하는 버그수정.
+6-5. GameState가 빌드인 상태에서  명령어입력 -> 건물건설가능 검사-> 가능하면 즉시건설 및 건설 불가시 상태메시지 출력하게 구현
+
 */
 
 
@@ -60,11 +62,11 @@ void cursor_move(DIRECTION dir, int steps, bool is_cursor_2x2);
 void sample_obj_move(void);
 void startObject(Unit** units, BUILDING** buildings, SPICE** spice, SANDWORM** sandworm);
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
-BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
+//BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
 POSITION sample_obj_next_position(void);
 SANDWORM* createSandworm(POSITION pos, SANDWORM* head);
 SPICE* createSpice(int amount, POSITION pos, SPICE* head);
-ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+//ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
 void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
 void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
 Unit* findClosestUnit(POSITION current_pos, Unit* units);
@@ -116,9 +118,10 @@ int main(void) {
 	//SANDWORM* sandworm = NULL;
 	startObject(&units, &buildings, &spice, &sandworm);
 	bool is_cursor_2x2 = false;
-	display(resource, map, cursor,is_cursor_2x2);
+	bool was_cursor_2x2 = false;
+	display(resource, map, cursor, is_cursor_2x2, was_cursor_2x2);
 	//insert_status_message("%d",&units->pos.row);
-	bool isBcommand = false;
+	bool isBcommand = true;
 	bool isSpaceTrigger = false;
 	bool firstCall = true;
 	GameState gameState = STATE_DEFAULT;
@@ -134,7 +137,8 @@ int main(void) {
 		user_input = getInputKey();
 		KEY key = get_key(user_input);
 		int steps = 1;
-
+		is_cursor_2x2 = false; // 루프때마다 2x2를 false로 하고 2x2 커서가 필요한 상황에서만 true로 
+		was_cursor_2x2 = false;
 		// 키 입력이 있으면 처리
 		if (is_arrow_key(key)) {
 			clock_t current_time = clock();
@@ -142,7 +146,7 @@ int main(void) {
 			if (key == last_key && (current_time - last_key_time) * 1000 / CLOCKS_PER_SEC <= DOUBLE_PRESS_INTERVAL) {
 				steps = 3;  // 두 번 빠르게 입력 시 3칸 이동
 			}
-			cursor_move(ktod(key), steps,is_cursor_2x2);
+			cursor_move(ktod(key), steps, is_cursor_2x2);
 			// 현재 키와 시간을 기록하여 다음 입력과 비교
 			last_key = key;
 			last_key_time = current_time;
@@ -153,7 +157,7 @@ int main(void) {
 			case k_quit: outro();
 			case k_none:
 				break;
-			case k_undef: 
+			case k_undef:
 				break;
 			default: break;
 			}
@@ -161,30 +165,33 @@ int main(void) {
 			switch (gameState) {
 			case STATE_DEFAULT:
 			{
-				if (!isBcommand) {
+				if (isBcommand) {
 					insert_command_message("B:Build");
-					isBcommand = true;
+					isBcommand = false;
 				}
-				if ((char)user_input == 'B') {
+				if ((char)user_input == 'B' || (char)user_input == 'b') {
 					init_command();
 					gameState = STATE_BUILD;
+					isBcommand = true;
 				}
 				if (user_input == SPACEBYTE) {
 					gameState = STATE_SPACE;
+					isBcommand = true;
 					init_command();
 				}
-					
+
 
 				break;
 			}
 			case STATE_BUILD: {
-				user_input = 66;
+
 				if (user_input == ESCBYTE) {
 					init_command();
 					gameState = STATE_DEFAULT;
+					firstCall = true;
 				}
 				else {
-					buildStateAct(user_input, cursor.current, resource, &buildingEnum,firstCall);
+					buildStateAct(user_input, cursor.current, resource, &buildingEnum, firstCall);
 					firstCall = false;
 				}
 
@@ -194,27 +201,39 @@ int main(void) {
 					insert_status_message("build %s", buildingTypeToString(buildingEnum));
 					firstCall = true;
 				}
-			
-				
+
+
 			}
-				break;
+							break;
 			case STATE_SPACE:
 				break;
 			case STATE_BUILD_SPACE: {
 				is_cursor_2x2 = true;
 				if (user_input == SPACEBYTE) {
-					
 
+					actBuildSpace(cursor, buildingEnum, &resource, units, buildings, spice, sandworm);
+					is_cursor_2x2 = false;
+					was_cursor_2x2 = true;
+					gameState = STATE_DEFAULT;
+					buildingEnum = -1;
 				}
+				if (user_input == ESCBYTE) {
+					init_status();
+					is_cursor_2x2 = false;
+					was_cursor_2x2 = true;
+					gameState = STATE_DEFAULT;
+					buildingEnum = -1;
+				}
+
 			}
-				break;
+			break;
 			default: break;
 
 
 			}
 
 
-			display(resource, map, cursor, is_cursor_2x2);
+			display(resource, map, cursor, is_cursor_2x2, was_cursor_2x2);
 			Sleep(TICK);
 			sys_clock += 10;
 		}

@@ -157,3 +157,7 @@ extern const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES];
 BuildingType* listCanCreateBuilding(RESOURCE resource, bool firtsCall);
 int getCreateBuildingCmd(int user_input, BuildingType* canCreateList, int count);
 void buildStateAct(int userInput, POSITION cursor, RESOURCE resource, int* buildingEnum, bool fisrtCall);
+ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
+bool attemp_building(CURSOR cursor, BuildingType building, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);

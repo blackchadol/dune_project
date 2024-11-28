@@ -117,9 +117,10 @@ BuildingType* listCanCreateBuilding(RESOURCE resource, bool firstcall) {
         if (firstcall) // 첫번째 함수 호출일때만 명령창에 입력. 
             // 건물이 건설 가능함을 표시
         {
-            insert_command_message("%c: %s ",
+            insert_command_message("%c: %s SPICE: %d ",
                 attr->symbol,
-                buildingTypeToString(attr->type)
+                buildingTypeToString(attr->type),
+                attr->cost
             );
         }
 
@@ -148,7 +149,7 @@ int getCreateBuildingCmd(int user_input, BuildingType* canCreateList, int count)
         const BuildingAttributes* attr = &BUILDINGATTRIBUTES[i];
 
         // 입력된 명령어가 BUILDINGATTRIBUTES에 있는지 확인
-        if (attr->symbol == (char)user_input) {
+        if (attr->symbol == (char)user_input || tolower(attr->symbol) == (char)user_input) {
             // 이 빌딩이 건설 가능한 목록에 포함되어 있는지 확인
             for (int j = 0; j < count; j++) {
                 if (canCreateList[j] == attr->type) {
@@ -168,3 +169,58 @@ void buildStateAct(int userInput, POSITION cursor, RESOURCE resource, int* build
     int count = countCanCreateBuilding(resource);
     *buildingEnum = getCreateBuildingCmd(userInput, canBuildList, count);
 }
+
+
+bool attemp_building(CURSOR cursor, BuildingType building, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
+    // 2x2 영역 검사
+    ObjectInfo result[4];
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+            // 각 위치에 객체가 있는지 확인
+            result[i * 2 + j] = checkObjectAtPosition((POSITION) { cursor.current.row + i, cursor.current.column + j }, units, buildings, spices, sandworms);
+        }
+    }
+
+    int flag = 0;
+    // 해당 자리에 다른 객체가 있으면 건설 불가
+    for (int i = 0; i < 4; i++) {
+        if (result[i].type != OBJECT_NONE) { // OBJECT_NONE이면 비어 있는 자리
+            // 건설해야 되는 자리에 다른 객체가 있으면 건설 불가
+            if (result[0].type == OBJECT_BUILDING) {
+                BUILDING* thisBuilding = (BUILDING*)result[0].object; {
+                    if (thisBuilding->type == PLATE) {
+                        return true;
+                    }
+                }
+            }
+            flag = 1; // 겹치는 오브젝트가 있다. 
+        }
+
+        
+        
+    }
+
+    if (!flag && building == PLATE) { // 겹치는 오브젝트가 없고 빌딩이 장판이면 건설가능
+        return true;
+    }
+    return false;
+
+}
+
+void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
+    bool canBuild = attemp_building(cursor, building, units, buildings, spices, sandworms);
+    if (canBuild) {
+        buildings = createBuilding(building, cursor.current, buildings, FACTION_PLAYER);
+        const BuildingAttributes* attr = &BUILDINGATTRIBUTES[building];
+        insert_status_message("build %s sucessfully", buildingTypeToString(building));
+        insert_status_message("Spice(%d -> %d)", resource->spice, resource->spice - attr->cost);
+        resource->spice -= attr->cost;
+        return;
+    }
+    else {
+        //display_cursor(cursor, false);
+        insert_status_message("can't build on this place");
+    }
+
+}
+
