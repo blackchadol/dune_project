@@ -40,6 +40,9 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 2-6. 디폴트 상태에서 스페이스바를 눌렀을 때 사용 가능한 명령어를 출력하고 만약 아군 건물에 스페이스바를 누르고 명령어를 누르면 해당 유닛 생성 기능 구현
 생성 위치는 해당 건물 주위에 아무 오브젝트도 없고, 맵의 범위도 벗어나지 않는 선
 2-7. 명령어가 없는 건물에 space바를 누르면 no command 메시지 출력
+2-8. 빌딩 선택후 유닛 생성 과정에 파라미터로 이중포인터를 사용함으로써 연결리스트로 관리하도록 수정. 
++++ 건물 건설시 이중포인터 없이 해서 이게 연결리스트에 넣지 못하는 오류가 있었는데 이중포인터를 이용하여 해결. 
+2-9. main 루프 마지막에 유닛개수를 검사해서 업데이트하는 함수 추가. 
 */
 
 
@@ -75,9 +78,9 @@ void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildin
 Unit* findClosestUnit(POSITION current_pos, Unit* units);
 void updateSandwormBehavior(SANDWORM* sandworm, Unit** units, SPICE** spices, BUILDING* buildings);
 void removeUnit(Unit** units, Unit* targetUnit);
-char getBuildingCommand(char command);
 void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit** units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms);
 bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
+void updatePopulation(Unit* head, RESOURCE* resource);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -89,7 +92,7 @@ char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH] = { 0 };
 RESOURCE resource = {
 	.spice = 20,
 	.spice_max = 20,
-	.population = 20,
+	.population = 0,
 	.population_max = 20
 };
 
@@ -258,7 +261,11 @@ int main(void) {
 
 			}
 
-
+			if (user_input == ESCBYTE) {
+				init_status();
+				init_command();
+			}
+			updatePopulation(units, &resource);
 			display(resource, map, cursor, is_cursor_2x2, was_cursor_2x2);
 			Sleep(TICK);
 			sys_clock += 10;
@@ -455,7 +462,7 @@ Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction) {
 	else if (faction == FACTION_ENEMY) {
 		color = COLOR_ENEMY;
 	}
-	else {
+	else {	
 		// 잘못된 FACTION 입력
 		return head;
 	}
@@ -885,30 +892,23 @@ void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit** unitHe
 
 }
 
-char getBuildingCommand(char command) {
+void updatePopulation(Unit* head, RESOURCE* resource) {
+	int playerUnitCount = 0; // FACTION_PLAYER 유닛 카운트
 
-	while (1) {
-		char key = _getch();  // 키 입력 받기
-		if (key == k_none) {
-			continue;
+	// 연결 리스트 순회
+	Unit* current = head;
+	while (current != NULL) {
+		if (current->isally) { // FACTION_PLAYER인 경우
+			playerUnitCount++;
 		}
-		if (key == command) {
-			return command;
-		}
-		else if (key == tolower(command)) {
-			return toupper(command);
-		}
-		else if (key == 27) {
-			
-			insert_system_message("quit");
-			//display(resource, map, cursor, );
-			return 'q';
-		}
+		current = current->next;
+	}
 
-		else {
-			insert_system_message("unavailable input");
-			//display(resource, map, cursor);
-		}
+	// RESOURCE 구조체의 population 업데이트
+	resource->population = playerUnitCount;
 
+	// population이 population_max를 초과하지 않도록 조정
+	if (resource->population > resource->population_max) {
+		resource->population = resource->population_max;
 	}
 }
