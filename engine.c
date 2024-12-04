@@ -37,7 +37,8 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 6-4. 메인루프 전 bool is_cursor_2x2 = false;를 선언함으로써 cursur_move, display_cursor함수를 2x2로 출력할 수 있게 구현 및 STATE_BUILD 상태에서 B 명령어가 base 명령어랑 겹쳐서 barracks를 설치 못하는 버그수정.
 6-5. GameState가 빌드인 상태에서  명령어입력 -> 건물건설가능 검사-> 가능하면 즉시건설 및 건설 불가시 상태메시지 출력하게 구현
 7. 연결리스트는 1에서 구현, 유닛 및 빌딩 연결리스트 구조체에 isally(아군여부)를 추가. 및 스페이스바를 눌렀을 때 아군타입 오브젝트 명령어 출력 구현. 
-
+2-6. 디폴트 상태에서 스페이스바를 눌렀을 때 사용 가능한 명령어를 출력하고 만약 아군 건물에 스페이스바를 누르고 명령어를 누르면 해당 유닛 생성 기능 구현
+생성 위치는 해당 건물 주위에 아무 오브젝트도 없고, 맵의 범위도 벗어나지 않는 선
 */
 
 
@@ -68,13 +69,14 @@ POSITION sample_obj_next_position(void);
 SANDWORM* createSandworm(POSITION pos, SANDWORM* head);
 SPICE* createSpice(int amount, POSITION pos, SPICE* head);
 //ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
-void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
-void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms,bool spaceStatus);
+void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms, bool spaceStatus);
 Unit* findClosestUnit(POSITION current_pos, Unit* units);
 void updateSandwormBehavior(SANDWORM* sandworm, Unit** units, SPICE** spices, BUILDING* buildings);
 void removeUnit(Unit** units, Unit* targetUnit);
-void buildingCommandProcess(char command);
 char getBuildingCommand(char command);
+void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+bool handleBuildingCommand(BUILDING* building, Unit* units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -125,7 +127,7 @@ int main(void) {
 	bool isBcommand = true;
 	bool isSpaceTrigger = false;
 	bool firstCall = true;
-	bool spaceStatus = false; // 현재 상태가 스페이스를 눌렀으면 true 바뀌어, 초기에 출력해야 하는값을 중복 출력하지 않게하는 변수
+	bool spaceStatus = true; // 현재 상태가 스페이스를 눌렀으면 true 바뀌어, 초기에 출력해야 하는값을 중복 출력하지 않게하는 변수
 	GameState gameState = STATE_DEFAULT;
 	Unit* selectedUnit = NULL;
 	int user_input = 0;
@@ -180,6 +182,7 @@ int main(void) {
 				if (user_input == SPACEBYTE) {
 					gameState = STATE_SPACE;
 					isBcommand = true;
+					spaceStatus = true;
 					init_command();
 				}
 
@@ -209,20 +212,21 @@ int main(void) {
 			}
 							break;
 			case STATE_SPACE: {
-				if (!spaceStatus) {
-					handleSpacebarPress(cursor.current, units, buildings, spice, sandworm);
-					spaceStatus = true;
-				}
+				// 기본은 true이되, 마지막에 false를 넣어줌으로써 무한루프 방지. 
 				if (user_input == SPACEBYTE) {
-					spaceStatus = false;
+					spaceStatus = true;
 				}
 
 				if (user_input == ESCBYTE) {
-					spaceStatus = false;
+					spaceStatus = true;
 					init_command();
 					init_status();
 					gameState = STATE_DEFAULT;
 				}
+				handleSpacebarPress(cursor.current, units, buildings, spice, sandworm, spaceStatus);
+				getCommand(user_input, cursor.current, &gameState, units, buildings, spice, sandworm);
+
+				spaceStatus = false;
 			}
 				break;
 			case STATE_BUILD_SPACE: {
@@ -633,7 +637,7 @@ ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 }
 
 // 커서의 위치를 인자로 받아 해당 위치의 오브젝트 정보 출력하는 함수
-void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
+void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms, bool spaceStatus) {
 	ObjectInfo objInfo = checkObjectAtPosition(pos, units, buildings, spices, sandworms);
 
 	// 오브젝트 타입에 따라 정보 출력
@@ -641,39 +645,34 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 	case OBJECT_UNIT:
 	{
 		Unit* unit = (Unit*)objInfo.object;
-		insert_status_message("Unit Type: %s\n", unitTypeToString(unit->type));
-		insert_status_message("Health: %d\n\n", unit->health);
-		if (unit->isally){// 유닛이 아군타입이면 명령어 사용가능. 
-			insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
+		if (spaceStatus) { // 한 오브젝트를 처음 호출했을 때만 출력. 
+			insert_status_message("Unit Type: %s\n", unitTypeToString(unit->type));
+			insert_status_message("Health: %d\n\n", unit->health);
+			if (unit->isally) {// 유닛이 아군타입이면 명령어 사용가능. 
+				insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
+			}
+			//insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
 		}
-		//insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
 		break;
 	}
 	case OBJECT_BUILDING:
 	{
 		BUILDING* building = (BUILDING*)objInfo.object;
 		
-		insert_status_message("Building Type: %s\n", buildingTypeToString(building->type));
-		if (building->durability < 0) {
-			insert_status_message("Durability: nononono\n\n");	
-		}
-		else {
-			insert_status_message("Durability: %d\n\n", building->durability);
-		}
+		if (spaceStatus) {
+			insert_status_message("Building Type: %s\n", buildingTypeToString(building->type));
+			if (building->durability < 0) {
+				insert_status_message("Durability: nononono\n\n");
+			}
+			else {
+				insert_status_message("Durability: %d\n\n", building->durability);
+			}
 
-		if (building->isally) {
-			insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
+			if (building->isally) {
+				insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
+			}
 		}
-		//// 명령관련 함수인데 일단 여기에 넣었음. 연결리스트에 아군인지, 적군인지 포함이 안되어있어서 우선 조건을 이렇게 써놓고 추후에 연결리스트에 아군, 적군 여부 추가. 
-		//insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
-		////display(resource, map, cursor);
-		//
-		//if (BUILDINGATTRIBUTES[building->type].faction == FACTION_PLAYER || BUILDINGATTRIBUTES[building->type].faction == FACTION_COMMON) 
-		//{
-		//	char command = getBuildingCommand(BUILDINGATTRIBUTES[building->type].command);
-		//	buildingCommandProcess(command);
-
-		//}
+		
 		break;
 
 
@@ -681,29 +680,37 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 	case OBJECT_SPICE:
 	{
 		SPICE* spice = (SPICE*)objInfo.object;
-		insert_status_message("Type: SPICE\n");
-		insert_status_message("Spice Amount: %d\n\n", spice->amount);
+		if (spaceStatus) {
+			insert_status_message("Type: SPICE\n");
+			insert_status_message("Spice Amount: %d\n\n", spice->amount);
+		}
 		break;
 	}
 	case OBJECT_SANDWORM:
 	{
 		SANDWORM* sandworm = (SANDWORM*)objInfo.object;
-		insert_status_message("Type: SANDWORM\n\n");
+		if (spaceStatus) {
+			insert_status_message("Type: SANDWORM\n\n");
+		}
 		break;
 	}
 	case OBJECT_ROCK:
-		insert_status_message("Type: ROCK\n\n");
+		if (spaceStatus) {
+			insert_status_message("Type: ROCK\n\n");
+		}
 		break;
 	default:
-		insert_status_message("desert\n\n", pos.row, pos.column);
+		if (spaceStatus) {
+			insert_status_message("desert\n\n", pos.row, pos.column);
+		}
 		break;
 	}
 }
 
 // 스페이스바를 눌렀을 때, 현재 커서 좌표에 해당하는 오브젝트 정보를 출력하는 함수
-void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
+void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms, bool spaceStatus) {
 	// 커서 위치에서 오브젝트 정보 출력
-	displayObjectInfoAtPosition(cursorPosition, units, buildings, spices, sandworms);
+	displayObjectInfoAtPosition(cursorPosition, units, buildings, spices, sandworms,spaceStatus);
 
 
 
@@ -834,29 +841,31 @@ void removeUnit(Unit** head, Unit* target) {
 ///     ============   명령어를 받는 함수 ========== /// 
 // 1. 건물의 명령어
 
-void buildingCommandProcess(char command) {
+void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
 	// 여기에 건물 옆에 생성할 수 있는 공간 검증 함수
 	// 공간검증을 통한 생성할 유닛의 position 계산
 	
-	switch (command) {
-	case 'H': {
-		units = createUnit(0, (POSITION) { 14, 2 }, units, FACTION_PLAYER); // 플레이어 유닛 생성, 샘플위치 1기 생산
-		insert_system_message("A new harvester ready.");
-		return;
-		break;
+	ObjectInfo objInfo = checkObjectAtPosition(pos, units, buildings, spices, sandworms);
+
+	if (objInfo.type == OBJECT_BUILDING) {
+		BUILDING* building = (BUILDING*)objInfo.object;
+		if (building->isally) { // 아군빌딩이면
+			bool isBuild = handleBuildingCommand(building, units, user_input, pos, &resource, map);
+			if (isBuild) {
+				init_command();
+				*gamestate = STATE_DEFAULT;
+			}
+		}
+	}// 현재 커서의 위치가 건물일 때
+
+
+	else if (objInfo.type == OBJECT_UNIT) { // 현재 커서의 위치가 유닛일 때
+		Unit* unit = (Unit*)objInfo.object;
+
 	}
 
-	case 'q': {
-		init_command();
-		init_status();
-		return;
-	}
 
-	default: {
-		// 기타 처리할 부분
-		break;
-	}
-	}
+	else return;   /// 건물도 유닛도 아니면 명령어를 받을 필요가 없기 때문에 그냥 리턴. 
 
 
 }

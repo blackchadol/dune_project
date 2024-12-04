@@ -2,7 +2,12 @@
 #include "common.h"
 #include "object.h"
 #include "display.h"
-
+bool handleBuildingCommand(BUILDING* building, Unit* units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
+Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
+POSITION checkCanCreatePos(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], BUILDING* building);
+bool isValidPosition(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos);
+UnitType inputToUnitType(int user_input);
+bool isWithinBounds(POSITION pos);
 //Unit* removeUnit(Unit* units, Unit* targetUnit);
 
 // =========rock의 개수나 위치는 변하지 않을 것이기 때문에 상수로 선언=============//
@@ -223,4 +228,70 @@ void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Uni
     }
 
 }
+// 맵 경계 확인 함수
+bool isWithinBounds(POSITION pos) {
+    return pos.row >= 0 && pos.row < MAP_HEIGHT &&
+        pos.column >= 0 && pos.column < MAP_WIDTH;
+}
 
+// 특정 좌표가 생성 가능한지 확인 (map[0]과 map[1] 모두 비어 있어야 함)
+bool isValidPosition(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos) {
+    return isWithinBounds(pos) &&
+        map[0][pos.row][pos.column] == ' ' &&  // 지형 레이어 비어 있음
+        map[1][pos.row][pos.column] == -1;    // 오브젝트 레이어 비어 있음
+}
+
+UnitType inputToUnitType(int user_input) {
+    if (user_input == 'H' || user_input == 'h') return HARVESTER;
+    else if (user_input == 'S' || user_input == 's') return SOILDIER;
+    else if (user_input == 'F' || user_input == 'f') return FREMEN;
+    else return;
+}
+
+POSITION checkCanCreatePos(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], BUILDING* building) {
+    int baseRow = building->position.row;
+    int baseCol = building->position.column;
+
+    // 2x2 건물의 인접 12칸 좌표 (시계 방향)
+    int directions[12][2] = {
+        {-1, -1}, {-1,  0}, {-1,  1}, {-1,  2}, // 위쪽 4칸
+        { 0, -1},                   { 0,  2},  // 좌우 2칸
+        { 1, -1},                   { 1,  2},  // 좌우 2칸
+        { 2, -1}, { 2,  0}, { 2,  1}, { 2,  2}  // 아래쪽 4칸
+    };
+
+    for (int i = 0; i < 12; i++) {
+        POSITION newPos = { baseRow + directions[i][0], baseCol + directions[i][1] };
+
+        // Layer 0과 Layer 1 모두 유효한 위치인지 확인
+        if (isValidPosition(map, newPos)) {
+            return newPos;
+        }
+    }
+
+    // 유효한 위치가 없으면 (-1, -1) 반환
+    POSITION invalidPos = { -1, -1 };
+    return invalidPos;
+}
+
+bool handleBuildingCommand(BUILDING* building, Unit* units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
+
+    if ((char)user_input == BUILDINGATTRIBUTES[building->type].command) {
+        POSITION newPos = checkCanCreatePos(map, building); // 건물 2x2 사방에 생성가능한 비어있는 유닛 지형이 있으면 건설. 아니면 오류메시지 출력
+        if (newPos.row != -1 && newPos.column != -1) {
+            if (UNIT_ATTRIBUTES[inputToUnitType(user_input)].production_cost <= resource->spice) { //  해당 유닛을 만들만큼 스파이스 양이 충분한지 확인
+                resource->spice -= UNIT_ATTRIBUTES[inputToUnitType(user_input)].production_cost; // 스파이스 감소
+                createUnit(inputToUnitType(user_input), newPos, units, FACTION_PLAYER); // 플레이어 유닛 
+                insert_status_message("complete create %s", unitTypeToString(inputToUnitType(user_input)));
+                return true;
+            }
+            else {
+                insert_system_message("no enough spice. this unit costs: %d", UNIT_ATTRIBUTES[inputToUnitType(user_input)].production_cost); // 스파이스가 없으면 시스템 창 출력
+            }
+        }
+        else {
+            insert_system_message("no place to create unit");
+        }
+    }
+    return false;
+}
