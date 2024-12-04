@@ -60,7 +60,7 @@ void display(
 	bool is_cursor_2x2,
 	bool was_cursor_2x2)
 {
-	display_resource(resource);
+	display_resource(resource); // population이 7 ~ 10일때 population_max가 200으로 되는 버그 발견 but, 디버거에서 값은 20으로 제대로 찍힘, 추후 가능하면 수정. 
 	display_map(map);
 	display_cursor(cursor, is_cursor_2x2,was_cursor_2x2);
 	display_system_message();

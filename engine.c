@@ -81,6 +81,7 @@ void removeUnit(Unit** units, Unit* targetUnit);
 void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit** units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms);
 bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 void updatePopulation(Unit* head, RESOURCE* resource);
+bool checkPopulationCreateUnit(RESOURCE resource);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -322,8 +323,7 @@ void init(void) {
 		}
 	}
 
-	// object sample
-	//map[1][obj.pos.row][obj.pos.column] = 'o';
+	
 }
 
 // (가능하다면) 지정한 방향으로 커서 이동
@@ -911,4 +911,12 @@ void updatePopulation(Unit* head, RESOURCE* resource) {
 	if (resource->population > resource->population_max) {
 		resource->population = resource->population_max;
 	}
+}
+
+
+bool checkPopulationCreateUnit(RESOURCE resource) {
+	if (resource.population >= resource.population_max) {
+		return false;
+	}
+	else return true;
 }
