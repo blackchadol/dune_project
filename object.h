@@ -162,4 +162,4 @@ void buildStateAct(int userInput, POSITION cursor, RESOURCE resource, int* build
 ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
 BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
 bool attemp_building(CURSOR cursor, BuildingType building, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
-void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Unit* units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms);

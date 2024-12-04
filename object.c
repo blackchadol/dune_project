@@ -212,10 +212,10 @@ bool attemp_building(CURSOR cursor, BuildingType building, Unit* units, BUILDING
 
 }
 
-void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
-    bool canBuild = attemp_building(cursor, building, units, buildings, spices, sandworms);
+void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Unit* units, BUILDING**buildings, SPICE* spices, SANDWORM* sandworms) {
+    bool canBuild = attemp_building(cursor, building, units, *buildings, spices, sandworms);
     if (canBuild) {
-        buildings = createBuilding(building, cursor.current, buildings, FACTION_PLAYER);
+        *buildings = createBuilding(building, cursor.current, *buildings, FACTION_PLAYER);
         const BuildingAttributes* attr = &BUILDINGATTRIBUTES[building];
         insert_status_message("build %s sucessfully", buildingTypeToString(building));
         insert_status_message("Spice(%d -> %d)", resource->spice, resource->spice - attr->cost);

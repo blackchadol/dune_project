@@ -101,15 +101,18 @@ OBJECT_SAMPLE obj = {
 	.next_move_time = 300
 };
 
-Unit* units = NULL; // 객체 연결리스트 초기화
-BUILDING* buildings = NULL;
-SPICE* spice = NULL;
-SANDWORM* sandworm = NULL;
+//Unit* units = NULL; // 객체 연결리스트 초기화
+//BUILDING* buildings = NULL;
+//SPICE* spice = NULL;
+//SANDWORM* sandworm = NULL;
 
 /* ================= main() =================== */
 int main(void) {
 	srand((unsigned int)time(NULL));
-
+	Unit* units = NULL; // 객체 연결리스트 초기화
+	BUILDING* buildings = NULL;
+	SPICE* spice = NULL;
+	SANDWORM* sandworm = NULL;
 	init();
 	init_status();
 	init_system_message();
@@ -234,7 +237,7 @@ int main(void) {
 				is_cursor_2x2 = true;
 				if (user_input == SPACEBYTE) {
 
-					actBuildSpace(cursor, buildingEnum, &resource, units, buildings, spice, sandworm);
+					actBuildSpace(cursor, buildingEnum, &resource, units, &buildings, spice, sandworm);
 					is_cursor_2x2 = false;
 					was_cursor_2x2 = true;
 					gameState = STATE_DEFAULT;
@@ -599,17 +602,23 @@ ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 	BUILDING* currentBuilding = buildings;
 	while (currentBuilding != NULL) {
 		// 건물은 크기에 따라 여러 좌표를 차지할 수 있으므로, 건물의 모든 좌표를 체크
-		for (int i = 0; i < NUM_BUILDING_TYPES; i++) {
-			BuildingAttributes buildingAttr = BUILDINGATTRIBUTES[i];
+		//for (int i = 0; i < NUM_BUILDING_TYPES; i++) {
+			//BuildingAttributes buildingAttr = BUILDINGATTRIBUTES[i];
+		for (int i = 0; i < 2; ++i) {
+			for (int j = 0; j < 2; ++j) {
+				// currentBuilding의 2x2 영역 좌표를 계산
+				int checkRow = currentBuilding->position.row + i;
+				int checkColumn = currentBuilding->position.column + j;
 
-			if (pos.row >= currentBuilding->position.row && pos.row < currentBuilding->position.row + 2 &&
-				pos.column >= currentBuilding->position.column && pos.column < currentBuilding->position.column + 2) {
-				result.type = OBJECT_BUILDING;
-				result.object = currentBuilding;  // 해당 건물 포인터 반환
-				return result;
+				// pos가 해당 좌표와 일치하는지 확인
+				if (pos.row == checkRow && pos.column == checkColumn) {
+					result.type = OBJECT_BUILDING;     // 영역 내에 포함된 경우
+					result.object = currentBuilding;  // 해당 건물 포인터 반환
+					return result;                    // 결과 반환
+				}
 			}
 		}
-		currentBuilding = currentBuilding->next;
+		currentBuilding = currentBuilding->next; // 다음 건물로 이동
 	}
 
 	// 4. 스파이스 검사
