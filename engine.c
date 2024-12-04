@@ -76,8 +76,8 @@ Unit* findClosestUnit(POSITION current_pos, Unit* units);
 void updateSandwormBehavior(SANDWORM* sandworm, Unit** units, SPICE** spices, BUILDING* buildings);
 void removeUnit(Unit** units, Unit* targetUnit);
 char getBuildingCommand(char command);
-void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
-bool handleBuildingCommand(BUILDING* building, Unit* units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
+void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit** units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms);
+bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -228,7 +228,7 @@ int main(void) {
 					gameState = STATE_DEFAULT;
 				}
 				handleSpacebarPress(cursor.current, units, buildings, spice, sandworm, spaceStatus);
-				getCommand(user_input, cursor.current, &gameState, units, buildings, spice, sandworm);
+				getCommand(user_input, cursor.current, &gameState, &units, &buildings, spice, sandworm);
 
 				spaceStatus = false;
 			}
@@ -680,7 +680,7 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 
 			if (building->isally) {
 				if (BUILDINGATTRIBUTES[building->type].command > 0) {
-					insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
+					insert_command_message("Command : %c \n", BUILDINGATTRIBUTES[building->type].command);
 				}
 				else {
 					insert_command_message("No command can use");
@@ -856,16 +856,16 @@ void removeUnit(Unit** head, Unit* target) {
 ///     ============   명령어를 받는 함수 ========== /// 
 // 1. 건물의 명령어
 
-void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms) {
+void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit** unitHead, BUILDING** buildingHead, SPICE* spices, SANDWORM* sandworms) {
 	// 여기에 건물 옆에 생성할 수 있는 공간 검증 함수
 	// 공간검증을 통한 생성할 유닛의 position 계산
 	
-	ObjectInfo objInfo = checkObjectAtPosition(pos, units, buildings, spices, sandworms);
+	ObjectInfo objInfo = checkObjectAtPosition(pos, *unitHead, *buildingHead, spices, sandworms);
 
 	if (objInfo.type == OBJECT_BUILDING) {
 		BUILDING* building = (BUILDING*)objInfo.object;
 		if (building->isally) { // 아군빌딩이면
-			bool isBuild = handleBuildingCommand(building, units, user_input, pos, &resource, map);
+			bool isBuild = handleBuildingCommand(building, unitHead, user_input, pos, &resource, map);
 			if (isBuild) {
 				init_command();
 				*gamestate = STATE_DEFAULT;

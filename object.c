@@ -2,7 +2,7 @@
 #include "common.h"
 #include "object.h"
 #include "display.h"
-bool handleBuildingCommand(BUILDING* building, Unit* units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
+bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
 POSITION checkCanCreatePos(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], BUILDING* building);
 bool isValidPosition(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos);
@@ -274,14 +274,15 @@ POSITION checkCanCreatePos(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], BUILDING* b
     return invalidPos;
 }
 
-bool handleBuildingCommand(BUILDING* building, Unit* units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
+bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
 
-    if ((char)user_input == BUILDINGATTRIBUTES[building->type].command) {
+    char command = BUILDINGATTRIBUTES[building->type].command;
+    if ((char)user_input == command || (char)user_input == tolower(command)) {
         POSITION newPos = checkCanCreatePos(map, building); // 건물 2x2 사방에 생성가능한 비어있는 유닛 지형이 있으면 건설. 아니면 오류메시지 출력
         if (newPos.row != -1 && newPos.column != -1) {
             if (UNIT_ATTRIBUTES[inputToUnitType(user_input)].production_cost <= resource->spice) { //  해당 유닛을 만들만큼 스파이스 양이 충분한지 확인
                 resource->spice -= UNIT_ATTRIBUTES[inputToUnitType(user_input)].production_cost; // 스파이스 감소
-                createUnit(inputToUnitType(user_input), newPos, units, FACTION_PLAYER); // 플레이어 유닛 
+                *units = createUnit(inputToUnitType(user_input), newPos, *units, FACTION_PLAYER); // 플레이어 유닛 
                 insert_status_message("complete create %s", unitTypeToString(inputToUnitType(user_input)));
                 return true;
             }
