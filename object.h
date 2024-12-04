@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "common.h"
-
+#include <stdbool.h>
 const char* unitTypeToString(int type);
 const char* buildingTypeToString(int type);
 int countCanCreateBuilding(RESOURCE resource);
@@ -84,6 +84,7 @@ typedef struct Unit {
 	int type;               // 유닛 유형 인덱스
 	int health;             // 현재 체력
 	POSITION pos;           // 현재 위치
+	bool isally;			// 아군유닛인지, 적군 유닛인지(샌드웜 같은 중립유닛은 따로 구현했으니 아군적군 여부만 나타냄. 
 	struct Unit* next;      // 다음 유닛을 가리키는 포인터 (연결 리스트)
 } Unit;
 
@@ -116,6 +117,7 @@ typedef struct {
 typedef struct {
 	int type; // 건물유형 인덱스
 	int durability; // 내구도
+	bool isally; // 건물이 아군건물인지 적군건물인지 여부. 
 	POSITION position;
 	struct BUILDING* next;
 }BUILDING;

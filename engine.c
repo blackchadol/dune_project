@@ -36,6 +36,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 6-3. 명령창 크기 및 시스템 메시지 창 크기 늘리기(높이 9로) 및 첫함수호출 bool 변수를 만들어서 첫 호출시에만 명령창에 출력하는걸로 수정. 
 6-4. 메인루프 전 bool is_cursor_2x2 = false;를 선언함으로써 cursur_move, display_cursor함수를 2x2로 출력할 수 있게 구현 및 STATE_BUILD 상태에서 B 명령어가 base 명령어랑 겹쳐서 barracks를 설치 못하는 버그수정.
 6-5. GameState가 빌드인 상태에서  명령어입력 -> 건물건설가능 검사-> 가능하면 즉시건설 및 건설 불가시 상태메시지 출력하게 구현
+7. 연결리스트는 1에서 구현, 유닛 및 빌딩 연결리스트 구조체에 isally(아군여부)를 추가. 및 스페이스바를 눌렀을 때 아군타입 오브젝트 명령어 출력 구현. 
 
 */
 
@@ -124,7 +125,9 @@ int main(void) {
 	bool isBcommand = true;
 	bool isSpaceTrigger = false;
 	bool firstCall = true;
+	bool spaceStatus = false; // 현재 상태가 스페이스를 눌렀으면 true 바뀌어, 초기에 출력해야 하는값을 중복 출력하지 않게하는 변수
 	GameState gameState = STATE_DEFAULT;
+	Unit* selectedUnit = NULL;
 	int user_input = 0;
 	int buildingEnum = -1;
 	while (1) {
@@ -205,7 +208,22 @@ int main(void) {
 
 			}
 							break;
-			case STATE_SPACE:
+			case STATE_SPACE: {
+				if (!spaceStatus) {
+					handleSpacebarPress(cursor.current, units, buildings, spice, sandworm);
+					spaceStatus = true;
+				}
+				if (user_input == SPACEBYTE) {
+					spaceStatus = false;
+				}
+
+				if (user_input == ESCBYTE) {
+					spaceStatus = false;
+					init_command();
+					init_status();
+					gameState = STATE_DEFAULT;
+				}
+			}
 				break;
 			case STATE_BUILD_SPACE: {
 				is_cursor_2x2 = true;
@@ -420,7 +438,8 @@ Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction) {
 	new_unit->health = attributes->stamina; // 체력
 	new_unit->pos = pos; // 현재위치
 	new_unit->next = head; // 현재 리스트의 맨 앞에 추가
-
+	if (faction == FACTION_PLAYER) new_unit->isally = true;
+	else new_unit->isally = false;
 	int color;
 	if (faction == FACTION_PLAYER) {
 		color = COLOR_FRIENDLY;
@@ -465,6 +484,7 @@ BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, Factio
 	}
 	else if (faction == FACTION_PLAYER) {
 		color = COLOR_FRIENDLY;
+		
 	}
 	else if (faction == FACTION_ENEMY) {
 		color = COLOR_ENEMY;
@@ -478,7 +498,8 @@ BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, Factio
 	new_building->type = type; // 빌딩 유형
 	new_building->durability = attributes->durability; // 내구도 초기화 (비용으로 설정)
 	new_building->next = head; // 현재 리스트의 맨 앞에 추가
-
+	if (faction == FACTION_PLAYER) new_building->isally = true;
+	else new_building->isally = false;
 	displayUnit(map, pos, color, 2, 0, attributes->symbol);
 	return new_building;
 
@@ -622,7 +643,10 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 		Unit* unit = (Unit*)objInfo.object;
 		insert_status_message("Unit Type: %s\n", unitTypeToString(unit->type));
 		insert_status_message("Health: %d\n\n", unit->health);
-		insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
+		if (unit->isally){// 유닛이 아군타입이면 명령어 사용가능. 
+			insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
+		}
+		//insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
 		break;
 	}
 	case OBJECT_BUILDING:
@@ -636,16 +660,20 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 		else {
 			insert_status_message("Durability: %d\n\n", building->durability);
 		}
-		// 명령관련 함수인데 일단 여기에 넣었음. 연결리스트에 아군인지, 적군인지 포함이 안되어있어서 우선 조건을 이렇게 써놓고 추후에 연결리스트에 아군, 적군 여부 추가. 
-		insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
-		//display(resource, map, cursor);
-		
-		if (BUILDINGATTRIBUTES[building->type].faction == FACTION_PLAYER || BUILDINGATTRIBUTES[building->type].faction == FACTION_COMMON) 
-		{
-			char command = getBuildingCommand(BUILDINGATTRIBUTES[building->type].command);
-			buildingCommandProcess(command);
 
+		if (building->isally) {
+			insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
 		}
+		//// 명령관련 함수인데 일단 여기에 넣었음. 연결리스트에 아군인지, 적군인지 포함이 안되어있어서 우선 조건을 이렇게 써놓고 추후에 연결리스트에 아군, 적군 여부 추가. 
+		//insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
+		////display(resource, map, cursor);
+		//
+		//if (BUILDINGATTRIBUTES[building->type].faction == FACTION_PLAYER || BUILDINGATTRIBUTES[building->type].faction == FACTION_COMMON) 
+		//{
+		//	char command = getBuildingCommand(BUILDINGATTRIBUTES[building->type].command);
+		//	buildingCommandProcess(command);
+
+		//}
 		break;
 
 
@@ -680,6 +708,8 @@ void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildin
 
 
 }
+
+
 
 // 샌드웜이 이동할 때 가장 가까운 유닛을 찾는 함수
 Unit* findClosestUnit(POSITION current_pos, Unit* units) {
