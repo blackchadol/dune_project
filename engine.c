@@ -39,6 +39,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 7. 연결리스트는 1에서 구현, 유닛 및 빌딩 연결리스트 구조체에 isally(아군여부)를 추가. 및 스페이스바를 눌렀을 때 아군타입 오브젝트 명령어 출력 구현. 
 2-6. 디폴트 상태에서 스페이스바를 눌렀을 때 사용 가능한 명령어를 출력하고 만약 아군 건물에 스페이스바를 누르고 명령어를 누르면 해당 유닛 생성 기능 구현
 생성 위치는 해당 건물 주위에 아무 오브젝트도 없고, 맵의 범위도 벗어나지 않는 선
+2-7. 명령어가 없는 건물에 space바를 누르면 no command 메시지 출력
 */
 
 
@@ -669,7 +670,12 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 			}
 
 			if (building->isally) {
-				insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
+				if (BUILDINGATTRIBUTES[building->type].command > 0) {
+					insert_command_message("Command : %c\n", BUILDINGATTRIBUTES[building->type].command);
+				}
+				else {
+					insert_command_message("No command can use");
+				}
 			}
 		}
 		
