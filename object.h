@@ -88,6 +88,14 @@ typedef struct Unit {
 	struct Unit* next;      // 다음 유닛을 가리키는 포인터 (연결 리스트)
 } Unit;
 
+typedef struct {
+	Unit harvester;
+	bool getCommand;
+	POSITION target;
+	int carrying_spice;  // 수집한 자원의 양
+	struct Harvester* next;
+}Harvester;
+
 
 typedef enum {
 	BASE,

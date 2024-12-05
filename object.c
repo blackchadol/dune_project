@@ -2,6 +2,8 @@
 #include "common.h"
 #include "object.h"
 #include "display.h"
+#include "io.h"
+#include "time.h"
 bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
 POSITION checkCanCreatePos(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], BUILDING* building);
@@ -304,4 +306,26 @@ bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POS
         }
     }
     return false;
+}
+
+
+SPICE* getHarvestCommand(int user_input, POSITION cursor, SPICE* spice) { // 
+
+    if (user_input == 'M' || user_input == 'm') {
+        // 스파이스 위치 검사. 
+        SPICE* currentSpice = spice;
+        while (currentSpice != NULL) {
+            if (currentSpice->position.row == cursor.row && currentSpice->position.column == cursor.column) {
+                insert_status_message("selected spice amount: %d", currentSpice->amount);
+                return currentSpice;
+            }
+
+            currentSpice = currentSpice->next;
+        }
+        insert_system_message("you selected wrong position "); // m을 눌렀지만 스파이스 위치가 아니라면 반환. 
+    }
+
+    else return NULL;
+    
+    return NULL;
 }
