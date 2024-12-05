@@ -53,6 +53,7 @@ void init_command();
 void display_command();
 void insert_command_message(const char* format, ...);
 void setColor(POSITION pos, int color);
+void toDefaultColorEmpty(POSITION pos, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 void display(
 	RESOURCE resource,
 	char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH],
@@ -404,4 +405,9 @@ void insert_command_message(const char* format, ...) {
 
 void setColor(POSITION pos , int color) {
 	colorMap[pos.row][pos.column] = color;
+}
+
+void toDefaultColorEmpty(POSITION pos, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
+	colorMap[pos.row][pos.column] = COLOR_DEFAULT;
+	map[0][pos.row][pos.column] = ' ';
 }

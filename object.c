@@ -4,6 +4,7 @@
 #include "display.h"
 #include "io.h"
 #include "time.h"
+#include <stdlib.h> 
 bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
 POSITION checkCanCreatePos(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], BUILDING* building);
@@ -12,6 +13,12 @@ UnitType inputToUnitType(int user_input);
 bool isWithinBounds(POSITION pos);
 bool checkPopulationCreateUnit(RESOURCE resource);
 void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPICE* spice, GameState* gamestate );
+POSITION getGoBackHome(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
+bool isNearBase(Unit* harvester);
+void extractSpice(Unit* currentUnit, SPICE* targetSpice);
+void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOURCE* resource, SPICE** spiceHead);
+void removeSpice(SPICE** head, SPICE* target);
+
 //Unit* removeUnit(Unit* units, Unit* targetUnit);
 
 // =========rock의 개수나 위치는 변하지 않을 것이기 때문에 상수로 선언=============//
@@ -321,16 +328,170 @@ void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPIC
                 init_status();
                 insert_system_message("sucessfully select spice");
                 insert_status_message("selected spice amount: %d", currentSpice->amount);
-                selectedUnit->target = currentSpice->position;
-                selectedUnit->firstCommand = true; // 명령어 call 됨.
+                selectedUnit->targetSpice = currentSpice;
+                selectedUnit->firstCommand = true; // 명령어 call 됨. 이렇게 되고 건드리면 안됨, 첫 명령을 완수하고 나서는 계속 루프를 돌거임. 
+                //selectedUnit->isCommand = true; // 명령어를 받는 존재, 만약 명령어를 끝내고 본진으로 돌아오면 fasle
                 *gamestate = STATE_DEFAULT;
+            }
+            else {
+                insert_system_message("you selected wrong position "); // m을 눌렀지만 스파이스 위치가 아니라면 반환. 
             }
 
             currentSpice = currentSpice->next;
         }
-        insert_system_message("you selected wrong position "); // m을 눌렀지만 스파이스 위치가 아니라면 반환. 
+       // insert_system_message("you selected wrong position "); // m을 눌렀지만 스파이스 위치가 아니라면 반환. 
     }
-    else return;
+    
+        
+    
 
     return;
+}
+POSITION getGoBackHome(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
+    POSITION upsideHome[3] = { {14,1}, {14,2}, {14,3} };
+    for (int i = 0; i < 3; i++) {
+       
+        if (map[0][upsideHome[i].row][upsideHome[i].column] == ' ' && // 집 위에 3칸이 비어있으면 그 값을 리턴
+            map[1][upsideHome[i].row][upsideHome[i].column] == -1) return upsideHome[i];
+        
+    }
+    return (POSITION){ -1, -1 }; // 본진 위가 꽉 차있으면 잘못된 값 리턴. 
+}
+
+bool isNearBase(Unit* harvester) {
+    int row = harvester->pos.row;
+    int column = harvester->pos.column;
+    POSITION upsideHome[3] = { {14,1}, {14,2}, {14,3} };
+    for (int i = 0; i < 3; i++) {
+        if (row == upsideHome[i].row && column == upsideHome[i].column) return true;
+    }
+    return false;
+}
+
+void extractSpice(Unit* currentUnit, SPICE* targetSpice) {
+    int extractAmount = (rand() % 3) + 2;
+    if (targetSpice->amount < extractAmount) extractAmount = targetSpice->amount; // 랜덤 추출량이 매장량보다 많으면 매장량을 추출량으로
+    currentUnit->targetSpice->amount -= extractAmount; // 타겟스파이스의 양을 줄이기
+    currentUnit->carrying_spice += extractAmount;// 추출 후 추출량 구조체에 저장. 
+    insert_system_message("harvester just extract spice");
+    insert_system_message("amount : %d", extractAmount);
+}
+void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOURCE* resource, int sys_clock, SPICE** spiceHead) {
+    // 샌드웜의 이동 주기마다 움직임 처리
+    if (sys_clock % 2000 != 0) {
+        return;  // 아직 이동 시간이 되지 않았음
+    }
+    Unit* currentUnit = *units;
+    POSITION target_pos = { -1, -1 };
+
+    //===================== 유닛 구조체를 참조해 하베스터일때 설정된 타겟이 있는지, 타겟을 들렀다가 본진으로 타겟을 변경했는지 참조해서 목적지 정하기 =======================
+    while (currentUnit != NULL) {
+        if (currentUnit->type == HARVESTER) {
+            if (currentUnit->firstCommand && currentUnit->targetSpice != NULL) { // 명령을 입력 받았고 타겟 스파이스가 널 포인터가 아니면. 
+                if (!currentUnit->goBase)
+                    target_pos = currentUnit->targetSpice->position;
+                else {
+                    target_pos = getGoBackHome(map); // 여기서 어떻게 처리
+                }
+
+            }
+            //if (currentUnit->goBase) {
+            //    target_pos = getGoBackHome(map); // 여기서 어떻게 처리
+            //}
+
+        }
+
+
+
+        //======유닛이 하베스터고 타겟 위치가 유효하다면 해당 방향으로 이동==========//
+        if (target_pos.row > 0 && target_pos.column > 0) {
+            POSITION diff = psub(target_pos, currentUnit->pos);
+            DIRECTION dir;
+
+            if (abs(diff.row) >= abs(diff.column)) {
+                dir = (diff.row >= 0) ? d_down : d_up;
+            }
+            else {
+                dir = (diff.column >= 0) ? d_right : d_left;
+            }
+
+            POSITION next_pos = pmove(currentUnit->pos, dir);
+            if (1 <= next_pos.row && next_pos.row <= MAP_HEIGHT - 2 &&
+                1 <= next_pos.column && next_pos.column <= MAP_WIDTH - 2 &&
+                map[0][next_pos.row][next_pos.column] == ' ' &&
+                map[1][next_pos.row][next_pos.column] == -1) {
+
+                map[1][currentUnit->pos.row][currentUnit->pos.column] = -1;  // 하베스터 위치를 비움
+                setColor(currentUnit->pos, COLOR_DEFAULT);  // 색상 초기화
+                currentUnit->pos = next_pos;
+                displayUnit(map, next_pos, COLOR_FRIENDLY, 1, 1, 'H');
+            }
+            if (currentUnit->targetSpice != NULL) {
+                if (abs(currentUnit->pos.row - currentUnit->targetSpice->position.row) <= 1 &&
+                    abs(currentUnit->pos.column - currentUnit->targetSpice->position.column) <= 1) { // 타겟 스파이스 옆에 도착하면. 
+                    // 스파이스 추출 및 집가는 불리언 트루로 바꾸기. // 3초걸리게 어떻게 하지요.
+                    currentUnit->goBase = true;
+                    extractSpice(currentUnit, currentUnit->targetSpice);
+                    char symbol = currentUnit->targetSpice->amount + '0';
+                    displayUnit(map, currentUnit->targetSpice->position, COLOR_SPICE, 1, 0, symbol);
+                    // extractSpice(currentUnit, currentUnit->targetSpice);
+
+                    if (currentUnit->targetSpice->amount <= 0) {
+                        toDefaultColorEmpty(currentUnit->targetSpice->position, map); // 유닛 삭제 display 함수
+                        removeSpice(spiceHead, currentUnit->targetSpice);
+                        //currentUnit->firstCommand = false; //  명령어 받는 기록도 초기화용
+                        //currentUnit->targetSpice = NULL;
+                    }
+                }
+            }
+
+            if (currentUnit->goBase && isNearBase(currentUnit)) { // 집가는 길인데 집 가는 길에 도착하면
+                currentUnit->goBase = false;
+                resource->spice += currentUnit->carrying_spice; // 자원 늘어남 
+                if (resource->spice > resource->spice_max) {
+                    resource->spice = resource->spice_max; // 만약 보유한도량을 초과할 때 대처
+                }
+                if (currentUnit->targetSpice->amount <= 0) {
+                    currentUnit->firstCommand = false; //  명령어 받는 기록도 초기화용
+                    currentUnit->targetSpice = NULL;
+                }
+            }
+
+        }
+        currentUnit = currentUnit->next;
+    }
+}
+        //currentUnit = currentUnit->next;
+    
+
+
+
+
+
+void removeSpice(SPICE** head, SPICE* target) {
+    if (head == NULL || *head == NULL || target == NULL) {
+        return;
+    }
+
+    SPICE* current = *head;
+    SPICE* previous = NULL;
+
+    // 첫 번째 노드가 target인 경우
+    if (current == target) {
+        *head = current->next; // 헤드를 다음 노드로 변경
+        free(current);         // 현재 노드 메모리 해제
+        return;
+    }
+
+    // 연결 리스트 순회
+    while (current != NULL) {
+        if (current == target) {
+            previous->next = current->next; // 이전 노드가 현재 노드의 다음 노드를 가리키도록 설정
+            free(current);                  // 현재 노드 메모리 해제
+            return;
+        }
+        previous = current;                 // 이전 노드를 갱신
+        current = current->next;            // 다음 노드로 이동
+    }
+
 }

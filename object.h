@@ -79,6 +79,13 @@ typedef struct {
 //	// 추가 항목 필요 시 정의
 //}UnitColor;
 
+typedef struct {
+	int amount; // 스파이스 매장량(1 ~ 9)
+	POSITION position;
+	struct SPICE* next;
+
+}SPICE; // 스파이스 구조체 
+
 // 유닛을 연결리스트로 관리하기 위해 가변 수치랑, 다음 구조체를 가리키는 포인터를 넣은 구조체 선언///
 typedef struct Unit {
 	int type;               // 유닛 유형 인덱스
@@ -88,9 +95,9 @@ typedef struct Unit {
 	struct Unit* next;      // 다음 유닛을 가리키는 포인터 (연결 리스트)
 
 	// 하베스터 전용 데이터 (필요 시만 사용)
-	bool isHarvester;      // 하베스터 여부
-	bool firstCommand;
-	POSITION target;       // 목표 위치
+	bool goBase;      // 명령을 받았는지, 아니면 알아서 위치를 찾아야하는지 .
+	bool firstCommand;	// 첫 명령어가 삽입되었는지? 삽입 되었으면 이후엔 알아서 행동하도록
+	SPICE* targetSpice;       // 목표 위치
 	int carrying_spice;    // 수집한 자원의 양
 } Unit;
 
@@ -138,12 +145,12 @@ typedef struct {
 
 }SANDWORM;  // 샌드웜 구조체 추가.
 
-typedef struct {
-	int amount; // 스파이스 매장량(1 ~ 9)
-	POSITION position;
-	struct SPICE* next;
-
-}SPICE; // 스파이스 구조체 
+//typedef struct {
+//	int amount; // 스파이스 매장량(1 ~ 9)
+//	POSITION position;
+//	struct SPICE* next;
+//
+//}SPICE; // 스파이스 구조체 
 
 //int get_unit_color(Unit* unit) {
 //	switch (unit->type) {

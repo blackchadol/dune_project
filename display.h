@@ -48,3 +48,4 @@ void display_system_message();
 void display_status();
 void display_command();
 void display_cursor(CURSOR cursor, bool is_cursor_2x2, bool was_cursor_2x2);
+void toDefaultColorEmpty(POSITION pos, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);

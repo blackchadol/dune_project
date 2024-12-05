@@ -88,6 +88,7 @@ bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POS
 void updatePopulation(Unit* head, RESOURCE* resource);
 bool checkPopulationCreateUnit(RESOURCE resource);
 void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPICE* spice, GameState* gamestate);
+void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOURCE* resource, int sys_clock, SPICE** spiceHead);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -97,7 +98,7 @@ KEY last_key = k_none;              // 마지막으로 눌린 키 값
 /* ================= game data =================== */
 char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH] = { 0 };
 RESOURCE resource = {
-	.spice = 20,
+	.spice = 10,
 	.spice_max = 20,
 	.population = 0,
 	.population_max = 20
@@ -153,6 +154,7 @@ int main(void) {
 			updateSandwormBehavior(current, &units, &spice, buildings);
 			current = current->next;  // 리스트에서 다음 샌드웜으로 이동
 		}
+		harvesterMove(&units, map, &resource, sys_clock, &spice);
 		// loop 돌 때마다(즉, TICK==10ms마다) 키 입력 확인
 		user_input = getInputKey();
 		KEY key = get_key(user_input);
@@ -487,14 +489,12 @@ Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction) {
 
 	// 하베스터 전용 데이터 초기화
 	if (type == HARVESTER) {
-		new_unit->isHarvester = true;
+		new_unit->goBase = false;
 		new_unit->firstCommand = false;
 		new_unit->carrying_spice = 0;
-		new_unit->target = (POSITION){ -1, -1 };  // 초기 목표 없음
+		new_unit->targetSpice = NULL;  // 초기 목표 없음
 	}
-	else {
-		new_unit->isHarvester = false;
-	}
+	
 	if (faction == FACTION_PLAYER) new_unit->isally = true;
 	else new_unit->isally = false;
 	int color;
@@ -708,7 +708,12 @@ void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings,
 			insert_status_message("Unit Type: %s\n", unitTypeToString(unit->type));
 			insert_status_message("Health: %d\n\n", unit->health);
 			if (unit->isally) {// 유닛이 아군타입이면 명령어 사용가능. 
-				insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
+				if (unit->type == HARVESTER) {
+					insert_command_message("Press H ");
+				}
+				else {
+					insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
+				}
 			}
 			//insert_command_message("Command : %c, %c\n", UNIT_ATTRIBUTES[unit->type].command[0], UNIT_ATTRIBUTES[unit->type].command[1]);
 		}
