@@ -105,7 +105,9 @@ typedef enum {
 	STATE_DEFAULT,    // 기본 상태
 	STATE_SPACE,      // 스페이스바 상태
 	STATE_BUILD,     // 빌드 상태(B를 누른 상태)
-	STATE_BUILD_SPACE // 빌드 상태에서 스페이스를 대기하는 상태
+	STATE_BUILD_SPACE, // 빌드 상태에서 스페이스를 대기하는 상태
+	STATE_HARVESTER_MOVE,
+	STATE_OTHER_UNIT
 } GameState;
 
 

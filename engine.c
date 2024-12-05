@@ -43,6 +43,8 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 2-8. 빌딩 선택후 유닛 생성 과정에 파라미터로 이중포인터를 사용함으로써 연결리스트로 관리하도록 수정. 
 +++ 건물 건설시 이중포인터 없이 해서 이게 연결리스트에 넣지 못하는 오류가 있었는데 이중포인터를 이용하여 해결. 
 2-9. main 루프 마지막에 유닛개수를 검사해서 업데이트하는 함수 추가. 
+2-10. 유닛을 생성할 때 population 값 이하까지만 생성가능하게 하는 코드 추가
+8-1. 하베스터 및 다른 유닛의 행동을 처리하기 위해 선택된 유닛 포인터 변수를 만들어 유닛을 선택했을때 해당변수에 저장함, 스페이스바를 눌렀을 때 위치를 기억해서 명령어 받기. 
 */
 
 
@@ -78,7 +80,7 @@ void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildin
 Unit* findClosestUnit(POSITION current_pos, Unit* units);
 void updateSandwormBehavior(SANDWORM* sandworm, Unit** units, SPICE** spices, BUILDING* buildings);
 void removeUnit(Unit** units, Unit* targetUnit);
-void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit** units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms);
+void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit** units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms,Unit** selectedUnit);
 bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 void updatePopulation(Unit* head, RESOURCE* resource);
 bool checkPopulationCreateUnit(RESOURCE resource);
@@ -140,6 +142,7 @@ int main(void) {
 	Unit* selectedUnit = NULL;
 	int user_input = 0;
 	int buildingEnum = -1;
+	POSITION spacePos = { 0,0 };
 	while (1) {
 		SANDWORM* current = sandworm;
 		while (current != NULL) {
@@ -178,6 +181,7 @@ int main(void) {
 			switch (gameState) {
 			case STATE_DEFAULT:
 			{
+				spacePos.column = 0, spacePos.row = 0; // 스페이스 상태로 가기전 초기화 
 				if (isBcommand) {
 					insert_command_message("B:Build");
 					isBcommand = false;
@@ -189,10 +193,12 @@ int main(void) {
 				}
 				if (user_input == SPACEBYTE) {
 					gameState = STATE_SPACE;
+					spacePos = cursor.current;
 					isBcommand = true;
 					spaceStatus = true;
 					init_command();
 				}
+				
 
 
 				break;
@@ -216,13 +222,15 @@ int main(void) {
 					firstCall = true;
 				}
 
-
+				break;
 			}
-							break;
+						
 			case STATE_SPACE: {
 				// 기본은 true이되, 마지막에 false를 넣어줌으로써 무한루프 방지. 
 				if (user_input == SPACEBYTE) {
 					spaceStatus = true;
+					spacePos = cursor.current;
+
 				}
 
 				if (user_input == ESCBYTE) {
@@ -231,12 +239,13 @@ int main(void) {
 					init_status();
 					gameState = STATE_DEFAULT;
 				}
-				handleSpacebarPress(cursor.current, units, buildings, spice, sandworm, spaceStatus);
-				getCommand(user_input, cursor.current, &gameState, &units, &buildings, spice, sandworm);
+				handleSpacebarPress(spacePos, units, buildings, spice, sandworm, spaceStatus);
+				getCommand(user_input, spacePos, &gameState, &units, &buildings, spice, sandworm,&selectedUnit); 
 
 				spaceStatus = false;
-			}
 				break;
+			}
+				
 			case STATE_BUILD_SPACE: {
 				is_cursor_2x2 = true;
 				if (user_input == SPACEBYTE) {
@@ -254,9 +263,18 @@ int main(void) {
 					gameState = STATE_DEFAULT;
 					buildingEnum = -1;
 				}
+				break;
+			}
+
+
+			case STATE_HARVESTER_MOVE: {
 
 			}
-			break;
+
+			case STATE_OTHER_UNIT: {
+
+			}
+			
 			default: break;
 
 
@@ -265,6 +283,7 @@ int main(void) {
 			if (user_input == ESCBYTE) {
 				init_status();
 				init_command();
+				gameState = STATE_DEFAULT;
 			}
 			updatePopulation(units, &resource);
 			display(resource, map, cursor, is_cursor_2x2, was_cursor_2x2);
@@ -863,7 +882,7 @@ void removeUnit(Unit** head, Unit* target) {
 ///     ============   명령어를 받는 함수 ========== /// 
 // 1. 건물의 명령어
 
-void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit** unitHead, BUILDING** buildingHead, SPICE* spices, SANDWORM* sandworms) {
+void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit** unitHead, BUILDING** buildingHead, SPICE* spices, SANDWORM* sandworms,Unit** selectedUnit) {
 	// 여기에 건물 옆에 생성할 수 있는 공간 검증 함수
 	// 공간검증을 통한 생성할 유닛의 position 계산
 	
@@ -883,6 +902,21 @@ void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit** unitHe
 
 	else if (objInfo.type == OBJECT_UNIT) { // 현재 커서의 위치가 유닛일 때
 		Unit* unit = (Unit*)objInfo.object;
+		if (unit->isally) {
+			if (unit->type == HARVESTER) { // 하베스터면 
+				if (user_input == 'H' || user_input == 'h') { // 사용자 인풋이 H나 h이면 하베스터 명령 입력 상태로 변환
+					*gamestate = STATE_HARVESTER_MOVE;
+					*selectedUnit = unit;    // 만약 유닛을 선택했으면 선택유닛의 정보를 포인터 변수에 저장. 
+					return;
+				}
+			}
+			else { // 하베스터가 아니먄
+				
+ 				*gamestate = STATE_OTHER_UNIT;
+				*selectedUnit = unit; 
+				return;
+			}
+		}
 
 	}
 
