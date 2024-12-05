@@ -16,7 +16,7 @@ void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPIC
 POSITION getGoBackHome(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 bool isNearBase(Unit* harvester);
 void extractSpice(Unit* currentUnit, SPICE* targetSpice);
-void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOURCE* resource, SPICE** spiceHead);
+void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOURCE* resource, int sys_clock, SPICE** spiceHead);
 void removeSpice(SPICE** head, SPICE* target);
 
 //Unit* removeUnit(Unit* units, Unit* targetUnit);
@@ -332,14 +332,13 @@ void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPIC
                 selectedUnit->firstCommand = true; // 명령어 call 됨. 이렇게 되고 건드리면 안됨, 첫 명령을 완수하고 나서는 계속 루프를 돌거임. 
                 //selectedUnit->isCommand = true; // 명령어를 받는 존재, 만약 명령어를 끝내고 본진으로 돌아오면 fasle
                 *gamestate = STATE_DEFAULT;
+                return;
             }
-            else {
-                insert_system_message("you selected wrong position "); // m을 눌렀지만 스파이스 위치가 아니라면 반환. 
-            }
+           
 
             currentSpice = currentSpice->next;
         }
-       // insert_system_message("you selected wrong position "); // m을 눌렀지만 스파이스 위치가 아니라면 반환. 
+       insert_system_message("you selected wrong position "); // m을 눌렀지만 스파이스 위치가 아니라면 반환. 
     }
     
         
@@ -382,10 +381,10 @@ void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOU
         return;  // 아직 이동 시간이 되지 않았음
     }
     Unit* currentUnit = *units;
-    POSITION target_pos = { -1, -1 };
 
     //===================== 유닛 구조체를 참조해 하베스터일때 설정된 타겟이 있는지, 타겟을 들렀다가 본진으로 타겟을 변경했는지 참조해서 목적지 정하기 =======================
     while (currentUnit != NULL) {
+        POSITION target_pos = { -1, -1 };
         if (currentUnit->type == HARVESTER) {
             if (currentUnit->firstCommand && currentUnit->targetSpice != NULL) { // 명령을 입력 받았고 타겟 스파이스가 널 포인터가 아니면. 
                 if (!currentUnit->goBase)
@@ -403,8 +402,23 @@ void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOU
 
 
 
-        //======유닛이 하베스터고 타겟 위치가 유효하다면 해당 방향으로 이동==========//
+        ////======유닛이 하베스터고 타겟 위치가 유효하다면 해당 방향으로 이동==========//
         if (target_pos.row > 0 && target_pos.column > 0) {
+        
+
+            if (currentUnit->goBase && isNearBase(currentUnit)) { // 집가는 길인데 집 가는 길에 도착하면
+                currentUnit->goBase = false;
+                resource->spice += currentUnit->carrying_spice; // 자원 늘어남 
+                currentUnit->carrying_spice = 0;
+                if (resource->spice > resource->spice_max) {
+                    resource->spice = resource->spice_max; // 만약 보유한도량을 초과할 때 대처
+                }
+                if (currentUnit->targetSpice->amount <= 0) {
+                    currentUnit->firstCommand = false; //  명령어 받는 기록도 초기화용
+                    currentUnit->targetSpice = NULL;
+                }
+            }
+
             POSITION diff = psub(target_pos, currentUnit->pos);
             DIRECTION dir;
 
@@ -427,8 +441,10 @@ void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOU
                 displayUnit(map, next_pos, COLOR_FRIENDLY, 1, 1, 'H');
             }
             if (currentUnit->targetSpice != NULL) {
-                if (abs(currentUnit->pos.row - currentUnit->targetSpice->position.row) <= 1 &&
-                    abs(currentUnit->pos.column - currentUnit->targetSpice->position.column) <= 1) { // 타겟 스파이스 옆에 도착하면. 
+                if ((abs(currentUnit->pos.row - currentUnit->targetSpice->position.row) == 1 &&
+                    currentUnit->pos.column == currentUnit->targetSpice->position.column) ||
+                    (abs(currentUnit->pos.column - currentUnit->targetSpice->position.column) == 1 &&
+                        currentUnit->pos.row == currentUnit->targetSpice->position.row)) { // 타겟 스파이스 옆에 도착하면. 
                     // 스파이스 추출 및 집가는 불리언 트루로 바꾸기. // 3초걸리게 어떻게 하지요.
                     currentUnit->goBase = true;
                     extractSpice(currentUnit, currentUnit->targetSpice);
@@ -445,18 +461,7 @@ void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOU
                 }
             }
 
-            if (currentUnit->goBase && isNearBase(currentUnit)) { // 집가는 길인데 집 가는 길에 도착하면
-                currentUnit->goBase = false;
-                resource->spice += currentUnit->carrying_spice; // 자원 늘어남 
-                if (resource->spice > resource->spice_max) {
-                    resource->spice = resource->spice_max; // 만약 보유한도량을 초과할 때 대처
-                }
-                if (currentUnit->targetSpice->amount <= 0) {
-                    currentUnit->firstCommand = false; //  명령어 받는 기록도 초기화용
-                    currentUnit->targetSpice = NULL;
-                }
-            }
-
+           
         }
         currentUnit = currentUnit->next;
     }
