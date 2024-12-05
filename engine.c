@@ -46,6 +46,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 2-10. 유닛을 생성할 때 population 값 이하까지만 생성가능하게 하는 코드 추가
 8-1. 하베스터 및 다른 유닛의 행동을 처리하기 위해 선택된 유닛 포인터 변수를 만들어 유닛을 선택했을때 해당변수에 저장함, 스페이스바를 눌렀을 때 위치를 기억해서 명령어 받기. 
 8-2. 하베스터 전용 연결리스트 구조체 제작(하베스터의 목적지, 명령어 받음여부, 옮기는 스파이스양을 저장하기 위함)
+8-3. 코드 유지보수 용이성을 위해 하베스터 구조체를 따로 만들지 않고 하베스터용 구조체 멤버를 유닛 구조체에 생성 
 */
 
 
@@ -473,6 +474,16 @@ Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction) {
 	new_unit->health = attributes->stamina; // 체력
 	new_unit->pos = pos; // 현재위치
 	new_unit->next = head; // 현재 리스트의 맨 앞에 추가
+
+	// 하베스터 전용 데이터 초기화
+	if (type == HARVESTER) {
+		new_unit->isHarvester = true;
+		new_unit->carrying_spice = 0;
+		new_unit->target = (POSITION){ -1, -1 };  // 초기 목표 없음
+	}
+	else {
+		new_unit->isHarvester = false;
+	}
 	if (faction == FACTION_PLAYER) new_unit->isally = true;
 	else new_unit->isally = false;
 	int color;

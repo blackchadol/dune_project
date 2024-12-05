@@ -86,15 +86,14 @@ typedef struct Unit {
 	POSITION pos;           // 현재 위치
 	bool isally;			// 아군유닛인지, 적군 유닛인지(샌드웜 같은 중립유닛은 따로 구현했으니 아군적군 여부만 나타냄. 
 	struct Unit* next;      // 다음 유닛을 가리키는 포인터 (연결 리스트)
+
+	// 하베스터 전용 데이터 (필요 시만 사용)
+	bool isHarvester;      // 하베스터 여부
+	POSITION target;       // 목표 위치
+	int carrying_spice;    // 수집한 자원의 양
 } Unit;
 
-typedef struct {
-	Unit harvester;
-	bool getCommand;
-	POSITION target;
-	int carrying_spice;  // 수집한 자원의 양
-	struct Harvester* next;
-}Harvester;
+
 
 
 typedef enum {
