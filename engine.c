@@ -47,6 +47,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 8-1. 하베스터 및 다른 유닛의 행동을 처리하기 위해 선택된 유닛 포인터 변수를 만들어 유닛을 선택했을때 해당변수에 저장함, 스페이스바를 눌렀을 때 위치를 기억해서 명령어 받기. 
 8-2. 하베스터 전용 연결리스트 구조체 제작(하베스터의 목적지, 명령어 받음여부, 옮기는 스파이스양을 저장하기 위함)
 8-3. 코드 유지보수 용이성을 위해 하베스터 구조체를 따로 만들지 않고 하베스터용 구조체 멤버를 유닛 구조체에 생성 
+8-4. 하베스터 선택 상태에 스파이스를 M 명령어로 선택할 수 있게 함. 
 */
 
 
@@ -86,6 +87,7 @@ void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit** units
 bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 void updatePopulation(Unit* head, RESOURCE* resource);
 bool checkPopulationCreateUnit(RESOURCE resource);
+void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPICE* spice, GameState* gamestate);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -270,7 +272,14 @@ int main(void) {
 
 
 			case STATE_HARVESTER_MOVE: {
-
+				if (user_input == SPACEBYTE) {
+					gameState = STATE_SPACE;
+					spacePos = cursor.current;
+					isBcommand = true;
+					spaceStatus = true;
+					init_command();
+				}
+				getHarvestCommand(selectedUnit,user_input,cursor.current,spice,&gameState);
 			}
 
 			case STATE_OTHER_UNIT: {
@@ -285,6 +294,7 @@ int main(void) {
 			if (user_input == ESCBYTE) {
 				init_status();
 				init_command();
+				isBcommand = true;
 				gameState = STATE_DEFAULT;
 			}
 			updatePopulation(units, &resource);
@@ -478,6 +488,7 @@ Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction) {
 	// 하베스터 전용 데이터 초기화
 	if (type == HARVESTER) {
 		new_unit->isHarvester = true;
+		new_unit->firstCommand = false;
 		new_unit->carrying_spice = 0;
 		new_unit->target = (POSITION){ -1, -1 };  // 초기 목표 없음
 	}
@@ -919,6 +930,8 @@ void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit** unitHe
 				if (user_input == 'H' || user_input == 'h') { // 사용자 인풋이 H나 h이면 하베스터 명령 입력 상태로 변환
 					*gamestate = STATE_HARVESTER_MOVE;
 					*selectedUnit = unit;    // 만약 유닛을 선택했으면 선택유닛의 정보를 포인터 변수에 저장. 
+					init_command();
+					insert_command_message("press 'M' on spice");
 					return;
 				}
 			}

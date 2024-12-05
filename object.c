@@ -11,6 +11,7 @@ bool isValidPosition(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], POSITION pos);
 UnitType inputToUnitType(int user_input);
 bool isWithinBounds(POSITION pos);
 bool checkPopulationCreateUnit(RESOURCE resource);
+void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPICE* spice, GameState* gamestate );
 //Unit* removeUnit(Unit* units, Unit* targetUnit);
 
 // =========rock의 개수나 위치는 변하지 않을 것이기 때문에 상수로 선언=============//
@@ -309,23 +310,27 @@ bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POS
 }
 
 
-SPICE* getHarvestCommand(int user_input, POSITION cursor, SPICE* spice) { // 
+void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPICE* spice, GameState* gamestate) { 
 
     if (user_input == 'M' || user_input == 'm') {
         // 스파이스 위치 검사. 
         SPICE* currentSpice = spice;
         while (currentSpice != NULL) {
             if (currentSpice->position.row == cursor.row && currentSpice->position.column == cursor.column) {
+                init_command();
+                init_status();
+                insert_system_message("sucessfully select spice");
                 insert_status_message("selected spice amount: %d", currentSpice->amount);
-                return currentSpice;
+                selectedUnit->target = currentSpice->position;
+                selectedUnit->firstCommand = true; // 명령어 call 됨.
+                *gamestate = STATE_DEFAULT;
             }
 
             currentSpice = currentSpice->next;
         }
         insert_system_message("you selected wrong position "); // m을 눌렀지만 스파이스 위치가 아니라면 반환. 
     }
+    else return;
 
-    else return NULL;
-    
-    return NULL;
+    return;
 }

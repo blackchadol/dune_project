@@ -89,6 +89,7 @@ typedef struct Unit {
 
 	// 하베스터 전용 데이터 (필요 시만 사용)
 	bool isHarvester;      // 하베스터 여부
+	bool firstCommand;
 	POSITION target;       // 목표 위치
 	int carrying_spice;    // 수집한 자원의 양
 } Unit;
