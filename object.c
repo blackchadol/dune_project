@@ -28,8 +28,10 @@ void patrolTarget(Unit* unit);
 void findEnemyByVision(Unit* head, Unit* currentUnit);
 void executeBattle(Unit* currentUnit, Unit** head, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 void getOtherUnitCommand(int user_input, POSITION cursor, Unit* selectedUnit, char* userCommand, GameState *gamestate);
-void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units);
-
+void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units, BUILDING** buildings);
+void attackBuilding(BUILDING** building, Unit* currentUnit, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
+void removeBuilding(BUILDING** head, BUILDING* target);
+void checkBuildingDurability(BUILDING** head, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 //Unit* removeUnit(Unit* units, Unit* targetUnit);
 
 // =========rock의 개수나 위치는 변하지 않을 것이기 때문에 상수로 선언=============//
@@ -543,7 +545,7 @@ void getOtherUnitCommand(int user_input, POSITION cursor, Unit* selectedUnit, ch
     return;
 }
 
-void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units) {
+void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units, BUILDING** buildings ) {
     Unit* currentUnit = *units;
     
 
@@ -596,6 +598,8 @@ void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Un
 
                 // 여기에 현재 유닛포인터와 어쩌구를 넣어서 전투 확인
                 executeBattle(currentUnit, units, map);
+                attackBuilding(buildings, currentUnit, map); // 빌딩 한칸 옆에 있으면 빌딩 공격. 
+
 
             }
         }
@@ -668,4 +672,121 @@ void executeBattle(Unit * currentUnit, Unit** head, char map[N_LAYER][MAP_HEIGHT
     }
         
     
+}
+
+
+void attackBuilding(BUILDING** building, Unit* currentUnit, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
+    // 만약 현재 유닛과 좌표상 거리가 1차이나는 건물이 있으면
+    // 그건물 포인터를 가지고 공격력 만큼 뭐 감소,
+    // 건물 내구도 0되면 삭제 및 리턴 , PLATE면 아무것도 못함. 
+    BUILDING* currentBuilding = *building;
+
+    while (currentBuilding != NULL) {   // 빌딩 검사
+        if (currentBuilding->isally != currentUnit->isally) {  // 서로 아군 및 적군이면
+            UnitAttributes* attr = &UNIT_ATTRIBUTES[currentUnit->type];
+            int baseRow = currentBuilding->position.row;
+            int baseCol = currentBuilding->position.column;
+            int directions[12][2] = {
+            {-1, -1}, {-1,  0}, {-1,  1}, {-1,  2}, // 위쪽 4칸    
+            { 0, -1},                   { 0,  2},  // 좌우 2칸
+            { 1, -1},                   { 1,  2},  // 좌우 2칸
+            { 2, -1}, { 2,  0}, { 2,  1}, { 2,  2}  // 아래쪽 4칸
+            };
+            int flag = 0;
+            for (int i = 0; i < 12; i++) {
+                POSITION canAttackPos = { baseRow + directions[i][0], baseCol + directions[i][1] };
+                if (currentUnit->pos.row == canAttackPos.row && currentUnit->pos.column == canAttackPos.column) { // 만약 건물이랑 한칸이내 차이나면
+                    if (currentBuilding->durability > 0 && attr->attack_power > 0) // 내구도가 존재하지 않는 건물은 -1로 표시를 해뒀기에 내구도가 0보다 높으면, 공격력이 있다면
+                    {
+                        flag = 1;
+                        currentBuilding->durability -= attr->attack_power;
+                        insert_system_message("attack %s  durability %d -> %d", buildingTypeToString(currentBuilding->type), currentBuilding->durability + attr->attack_power, currentBuilding->durability);
+                        
+                       
+                    }
+
+                }
+                
+ 
+            }
+            //if (currentBuilding->durability <= 0 && currentBuilding->durability != -1) {
+            //    // 이렇게 되면 해당 빌딩 삭제.
+            //    int buildingRow = currentBuilding->position.row; // 삭제 포지션 정의
+            //    int buildingColumn = currentBuilding->position.column;
+            //    for (int i = 0; i < 2; i++) {
+            //        for (int j = 0; j < 2; j++) {
+            //            toDefaultColorEmpty((POSITION) { buildingRow + i, buildingRow + j }, map); // 빌딩 포지션 기준으로 2x2 색상 초기화. 
+            //        }
+            //    }
+            //    removeBuilding(building, currentBuilding);
+
+            //}
+        }
+        currentBuilding = currentBuilding->next;
+    }
+}
+
+
+void removeBuilding(BUILDING** head, BUILDING* target) {
+    if (head == NULL || *head == NULL || target == NULL) {
+        return;
+    }
+
+    BUILDING* current = *head;
+    BUILDING* previous = NULL;
+
+    // If the target is the head of the list
+    if (current == target) {
+        *head = current->next;
+        free(current);
+        return;
+    }
+
+    // Traverse the list to find the target
+    while (current != NULL) {
+        if (current == target) {
+            previous->next = current->next;
+            free(current);
+            return;
+        }
+        previous = current;
+        current = current->next;
+    }
+    return;
+}
+
+
+void checkBuildingDurability(BUILDING** head, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
+    BUILDING* currentBuilding = *head;
+    BUILDING* prevBuilding = NULL;
+
+    while (currentBuilding != NULL) {
+        BUILDING* nextBuilding = currentBuilding->next; // 다음 노드를 미리 저장
+
+        if (currentBuilding->durability <= 0 && currentBuilding->durability != -1) {
+            insert_system_message("delete %s", buildingTypeToString(currentBuilding->type));
+            // 건물 내구도가 0 이하라면 삭제
+            int buildingRow = currentBuilding->position.row;
+            int buildingColumn = currentBuilding->position.column;
+
+            // 건물의 2x2 영역 초기화
+            for (int i = 0; i < 2; i++) {
+                for (int j = 0; j < 2; j++) {
+                    toDefaultColorEmpty((POSITION) { buildingRow + i, buildingColumn + j }, map);
+                }
+            }
+
+            // removeBuilding을 호출하여 노드 삭제
+            removeBuilding(head, currentBuilding);
+
+            // prevBuilding는 업데이트하지 않음 (currentBuilding이 삭제되었으므로)
+        }
+        else {
+            // 삭제되지 않은 경우, prevBuilding 업데이트
+            prevBuilding = currentBuilding;
+        }
+
+        // 다음 노드로 이동
+        currentBuilding = nextBuilding;
+    }
 }

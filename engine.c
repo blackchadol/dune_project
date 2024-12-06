@@ -53,7 +53,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 9-1. 다른 유닛들 m,p 커맨드를 받고 인접하면 전투하는 코드 구현\
 -> 각 유닛의 위치 및 기억된 구조체 정보를 가지고 인접한 칸에 만나면 공격력 만큼 체력이 낮아지도록 구현
 10-1. 적군 유닛과 만나면 전투를 하고 유닛의 체력이 0이하가 되면 삭제 코드 추가
-
+10-2. 유닛이 적군 건물과 인접하면 유닛의 공격력 만큼 건물 공격 및 내구도 0이되면 삭제
 */
 
 
@@ -96,7 +96,9 @@ bool checkPopulationCreateUnit(RESOURCE resource);
 void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPICE* spice, GameState* gamestate);
 void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOURCE* resource, int sys_clock, SPICE** spiceHead);
 void getOtherUnitCommand(int user_input, POSITION cursor, Unit* selectedUnit, char* userCommand, GameState* gamestate);
-void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units);
+void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units, BUILDING** buildings);
+void checkBuildingDurability(BUILDING** head, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
+
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -308,8 +310,9 @@ int main(void) {
 			}
 			
 		}
-		updateOtherUnit(map, sys_clock, &units);
+		updateOtherUnit(map, sys_clock, &units, &buildings);
 		updatePopulation(units, &resource);
+		checkBuildingDurability(&buildings, map);
 		display(resource, map, cursor, is_cursor_2x2, was_cursor_2x2);
 		Sleep(TICK);
 		sys_clock += 10;
@@ -538,7 +541,7 @@ BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, Factio
 	}
 	if (type != PLATE) {
 		if (map[0][pos.row][pos.column] != 'P') { // 생성하려는 위치에 다른 오브젝트가 있을 때 또는 장판이 아닐때. 
-			printf("이 건물은 생성할 수 없습니다.\n");
+			insert_system_message("이 건물은 생성할 수 없습니다.\n");
 			return head; // 유닛 생성 실패 시 현재 리스트 반환
 		}
 	}
@@ -615,7 +618,7 @@ void startObject(Unit** units, BUILDING** buildings, SPICE** spice, SANDWORM** s
 	*units = createUnit(1, (POSITION) { 10, 10 }, * units, FACTION_PLAYER); // 샌드웜 행동을 보기위한 샘플유닛 생성
 	
 	*units = createUnit(3, (POSITION) { 5, 58 }, * units, FACTION_ENEMY);
-	*units = createUnit(4, (POSITION) { 15, 8 }, * units, FACTION_ENEMY);
+	//*units = createUnit(4, (POSITION) { 15, 8 }, * units, FACTION_ENEMY);
 	
 
 	*buildings = createBuilding(1, (POSITION) { 15, 1 }, *buildings, FACTION_PLAYER);
@@ -625,6 +628,9 @@ void startObject(Unit** units, BUILDING** buildings, SPICE** spice, SANDWORM** s
 	*buildings = createBuilding(1, (POSITION) { 1, 57 }, *buildings, FACTION_ENEMY);
 	*buildings = createBuilding(0, (POSITION) { 1, 57 }, *buildings, FACTION_ENEMY);
 	*buildings = createBuilding(1, (POSITION) { 1, 55 }, * buildings, FACTION_ENEMY);
+
+	*buildings = createBuilding(1, (POSITION) { 15, 6 }, * buildings, FACTION_ENEMY);
+	*buildings = createBuilding(0, (POSITION) { 15, 6 }, * buildings, FACTION_ENEMY);
 	
 	*spice = createSpice(5, (POSITION) { 12, 1 }, *spice);
 	*spice = createSpice(5, (POSITION) { 5, 58 }, *spice);
