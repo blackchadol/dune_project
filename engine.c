@@ -50,7 +50,10 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 8-4. 하베스터 선택 상태에 스파이스를 M 명령어로 선택할 수 있게 함. 
 8-5. m명령어로 선택한 스파이스를 하베스터 구조체에 저장하여 추출 및 본진 왕복 구현.
 8-6. 하베스터 움직임 함수에 목적지 변수가 초기화 되지않는 오류 수정.
-8-7. 다른 유닛들 m,p 커맨드를 받고 인접하면 전투하는 코드 구현
+9-1. 다른 유닛들 m,p 커맨드를 받고 인접하면 전투하는 코드 구현\
+-> 각 유닛의 위치 및 기억된 구조체 정보를 가지고 인접한 칸에 만나면 공격력 만큼 체력이 낮아지도록 구현
+10-1. 적군 유닛과 만나면 전투를 하고 유닛의 체력이 0이하가 되면 삭제 코드 추가
+
 */
 
 
@@ -149,11 +152,11 @@ int main(void) {
 	POSITION spacePos = { 0,0 };
 	char unitCommand = '\0'; // 사용자가 유닛에게 내린 명령어 기억변수
 	while (1) {
-		SANDWORM* current = sandworm;
-		while (current != NULL) {
-			updateSandwormBehavior(current, &units, &spice, buildings);
-			current = current->next;  // 리스트에서 다음 샌드웜으로 이동
-		}
+		//SANDWORM* current = sandworm;
+		//while (current != NULL) {
+		//	updateSandwormBehavior(current, &units, &spice, buildings);
+		//	current = current->next;  // 리스트에서 다음 샌드웜으로 이동
+		//}
 		harvesterMove(&units, map, &resource, sys_clock, &spice);
 		// loop 돌 때마다(즉, TICK==10ms마다) 키 입력 확인
 		user_input = getInputKey();
@@ -611,6 +614,10 @@ void startObject(Unit** units, BUILDING** buildings, SPICE** spice, SANDWORM** s
 	*units = createUnit(0, (POSITION) { 3, 58 }, *units, FACTION_ENEMY); // 플레이어 유닛 생성
 	*units = createUnit(1, (POSITION) { 10, 10 }, * units, FACTION_PLAYER); // 샌드웜 행동을 보기위한 샘플유닛 생성
 	
+	*units = createUnit(3, (POSITION) { 5, 58 }, * units, FACTION_ENEMY);
+	*units = createUnit(4, (POSITION) { 15, 8 }, * units, FACTION_ENEMY);
+	
+
 	*buildings = createBuilding(1, (POSITION) { 15, 1 }, *buildings, FACTION_PLAYER);
 	*buildings = createBuilding(0, (POSITION) { 15, 1 }, *buildings, FACTION_PLAYER);
 	*buildings = createBuilding(1, (POSITION) { 15, 3 }, *buildings, FACTION_PLAYER);

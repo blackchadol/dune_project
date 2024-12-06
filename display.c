@@ -410,4 +410,5 @@ void setColor(POSITION pos , int color) {
 void toDefaultColorEmpty(POSITION pos, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
 	colorMap[pos.row][pos.column] = COLOR_DEFAULT;
 	map[0][pos.row][pos.column] = ' ';
+	map[1][pos.row][pos.column] = -1;
 }
