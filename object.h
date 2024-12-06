@@ -3,7 +3,7 @@
 #include <stdbool.h>
 const char* unitTypeToString(int type);
 const char* buildingTypeToString(int type);
-int countCanCreateBuilding(RESOURCE resource);
+//int countCanCreateBuilding(RESOURCE resource);
 
 
 // 맵에 객체를 표시하기 위한 색상 정의, 필요에 따라 색상 임의 변경함//
@@ -93,7 +93,10 @@ typedef struct Unit {
 	POSITION pos;           // 현재 위치
 	bool isally;			// 아군유닛인지, 적군 유닛인지(샌드웜 같은 중립유닛은 따로 구현했으니 아군적군 여부만 나타냄. 
 	struct Unit* next;      // 다음 유닛을 가리키는 포인터 (연결 리스트)
-
+	POSITION target;
+	char command;
+	POSITION patrolPos;
+	struct Unit* findEnemy;
 	// 하베스터 전용 데이터 (필요 시만 사용)
 	bool goBase;      // 명령을 받았는지, 아니면 알아서 위치를 찾아야하는지 .
 	bool firstCommand;	// 첫 명령어가 삽입되었는지? 삽입 되었으면 이후엔 알아서 행동하도록
@@ -171,10 +174,11 @@ typedef struct {
 extern const POSITION rock_positions[10];
 extern const UnitAttributes UNIT_ATTRIBUTES[NUM_UNIT_TYPES];
 extern const BuildingAttributes BUILDINGATTRIBUTES[NUM_BUILDING_TYPES];
-BuildingType* listCanCreateBuilding(RESOURCE resource, bool firtsCall);
-int getCreateBuildingCmd(int user_input, BuildingType* canCreateList, int count);
+//BuildingType* listCanCreateBuilding(RESOURCE resource, bool firtsCall);
+//int getCreateBuildingCmd(int user_input, BuildingType* canCreateList, int count);
 void buildStateAct(int userInput, POSITION cursor, RESOURCE resource, int* buildingEnum, bool fisrtCall);
-ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
-BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
+//ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+//BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
 bool attemp_building(CURSOR cursor, BuildingType building, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
 void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Unit* units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms);
+

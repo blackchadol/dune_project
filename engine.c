@@ -49,6 +49,8 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 8-3. 코드 유지보수 용이성을 위해 하베스터 구조체를 따로 만들지 않고 하베스터용 구조체 멤버를 유닛 구조체에 생성 
 8-4. 하베스터 선택 상태에 스파이스를 M 명령어로 선택할 수 있게 함. 
 8-5. m명령어로 선택한 스파이스를 하베스터 구조체에 저장하여 추출 및 본진 왕복 구현.
+8-6. 하베스터 움직임 함수에 목적지 변수가 초기화 되지않는 오류 수정.
+8-7. 다른 유닛들 m,p 커맨드를 받고 인접하면 전투하는 코드 구현
 */
 
 
@@ -78,18 +80,20 @@ Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction);
 POSITION sample_obj_next_position(void);
 SANDWORM* createSandworm(POSITION pos, SANDWORM* head);
 SPICE* createSpice(int amount, POSITION pos, SPICE* head);
-//ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
 void displayObjectInfoAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms,bool spaceStatus);
 void handleSpacebarPress(POSITION cursorPosition, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms, bool spaceStatus);
 Unit* findClosestUnit(POSITION current_pos, Unit* units);
 void updateSandwormBehavior(SANDWORM* sandworm, Unit** units, SPICE** spices, BUILDING* buildings);
 void removeUnit(Unit** units, Unit* targetUnit);
-void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit** units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms,Unit** selectedUnit);
+void getCommand(int user_input, POSITION pos, GameState* gamestate, Unit** units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms,Unit** selectedUnit, char* unitCommand);
 bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POSITION pos, RESOURCE* resource, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
 void updatePopulation(Unit* head, RESOURCE* resource);
 bool checkPopulationCreateUnit(RESOURCE resource);
 void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPICE* spice, GameState* gamestate);
 void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOURCE* resource, int sys_clock, SPICE** spiceHead);
+void getOtherUnitCommand(int user_input, POSITION cursor, Unit* selectedUnit, char* userCommand, GameState* gamestate);
+void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units);
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
 CURSOR cursor = { { 1, 1 }, {1, 1} };
@@ -113,10 +117,7 @@ OBJECT_SAMPLE obj = {
 	.next_move_time = 300
 };
 
-//Unit* units = NULL; // 객체 연결리스트 초기화
-//BUILDING* buildings = NULL;
-//SPICE* spice = NULL;
-//SANDWORM* sandworm = NULL;
+
 
 /* ================= main() =================== */
 int main(void) {
@@ -131,10 +132,7 @@ int main(void) {
 	init_command();
 	intro();
 	init_colorMap();
-	//Unit* units = NULL; // 객체 연결리스트 초기화
-	//BUILDING* buildings = NULL;
-	//SPICE* spice = NULL;
-	//SANDWORM* sandworm = NULL;
+	
 	startObject(&units, &buildings, &spice, &sandworm);
 	bool is_cursor_2x2 = false;
 	bool was_cursor_2x2 = false;
@@ -149,6 +147,7 @@ int main(void) {
 	int user_input = 0;
 	int buildingEnum = -1;
 	POSITION spacePos = { 0,0 };
+	char unitCommand = '\0'; // 사용자가 유닛에게 내린 명령어 기억변수
 	while (1) {
 		SANDWORM* current = sandworm;
 		while (current != NULL) {
@@ -159,6 +158,7 @@ int main(void) {
 		// loop 돌 때마다(즉, TICK==10ms마다) 키 입력 확인
 		user_input = getInputKey();
 		KEY key = get_key(user_input);
+		
 		int steps = 1;
 		is_cursor_2x2 = false; // 루프때마다 2x2를 false로 하고 2x2 커서가 필요한 상황에서만 true로 
 		was_cursor_2x2 = false;
@@ -184,6 +184,7 @@ int main(void) {
 				break;
 			default: break;
 			}
+		
 
 			switch (gameState) {
 			case STATE_DEFAULT:
@@ -247,7 +248,7 @@ int main(void) {
 					gameState = STATE_DEFAULT;
 				}
 				handleSpacebarPress(spacePos, units, buildings, spice, sandworm, spaceStatus);
-				getCommand(user_input, spacePos, &gameState, &units, &buildings, spice, sandworm,&selectedUnit); 
+				getCommand(user_input, spacePos, &gameState, &units, &buildings, spice, sandworm,&selectedUnit, &unitCommand); 
 
 				spaceStatus = false;
 				break;
@@ -283,10 +284,12 @@ int main(void) {
 					init_command();
 				}
 				getHarvestCommand(selectedUnit,user_input,cursor.current,spice,&gameState);
+				break;
 			}
 
 			case STATE_OTHER_UNIT: {
-
+				getOtherUnitCommand(user_input, cursor.current, selectedUnit, &unitCommand, &gameState);
+				break;
 			}
 			
 			default: break;
@@ -300,13 +303,17 @@ int main(void) {
 				isBcommand = true;
 				gameState = STATE_DEFAULT;
 			}
-			updatePopulation(units, &resource);
-			display(resource, map, cursor, is_cursor_2x2, was_cursor_2x2);
-			Sleep(TICK);
-			sys_clock += 10;
+			
 		}
+		updateOtherUnit(map, sys_clock, &units);
+		updatePopulation(units, &resource);
+		display(resource, map, cursor, is_cursor_2x2, was_cursor_2x2);
+		Sleep(TICK);
+		sys_clock += 10;
+		
 	}
 }
+
 
 /* ================= subfunctions =================== */
 void intro(void) {
@@ -487,7 +494,10 @@ Unit* createUnit(UnitType type, POSITION pos, Unit* head, FactionType faction) {
 	new_unit->health = attributes->stamina; // 체력
 	new_unit->pos = pos; // 현재위치
 	new_unit->next = head; // 현재 리스트의 맨 앞에 추가
-
+	new_unit->target = (POSITION){ -1, -1 }; // 유닛 움직임 구현을 위한 
+	new_unit->command = '\0'; // 입력받은 명령어를 기억하기 위함. 
+	new_unit->patrolPos = pos; // patrol 명령을 받을 때 왕복할 위치를 기억하기 위한 멤버
+	new_unit->findEnemy = NULL; // 만약 시야에 적이 들어왔다면!!
 	// 하베스터 전용 데이터 초기화
 	if (type == HARVESTER) {
 		new_unit->goBase = false;
@@ -556,6 +566,7 @@ BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, Factio
 	new_building->type = type; // 빌딩 유형
 	new_building->durability = attributes->durability; // 내구도 초기화 (비용으로 설정)
 	new_building->next = head; // 현재 리스트의 맨 앞에 추가
+	
 	if (faction == FACTION_PLAYER) new_building->isally = true;
 	else new_building->isally = false;
 	displayUnit(map, pos, color, 2, 0, attributes->symbol);
@@ -911,7 +922,7 @@ void removeUnit(Unit** head, Unit* target) {
 ///     ============   명령어를 받는 함수 ========== /// 
 // 1. 건물의 명령어
 
-void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit** unitHead, BUILDING** buildingHead, SPICE* spices, SANDWORM* sandworms,Unit** selectedUnit) {
+void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit** unitHead, BUILDING** buildingHead, SPICE* spices, SANDWORM* sandworms,Unit** selectedUnit,char* unitCommand) {
 	// 여기에 건물 옆에 생성할 수 있는 공간 검증 함수
 	// 공간검증을 통한 생성할 유닛의 position 계산
 	
@@ -942,10 +953,13 @@ void getCommand(int user_input,POSITION pos, GameState* gamestate, Unit** unitHe
 				}
 			}
 			else { // 하베스터가 아니먄
-				
- 				*gamestate = STATE_OTHER_UNIT;
-				*selectedUnit = unit; 
-				return;
+				if (user_input == 'M' || user_input == 'm' || user_input == 'P' || user_input == 'p') {
+					*unitCommand = (char)user_input;
+					*gamestate = STATE_OTHER_UNIT;
+					*selectedUnit = unit;
+					
+					return;
+				}
 			}
 		}
 

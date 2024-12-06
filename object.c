@@ -18,6 +18,17 @@ bool isNearBase(Unit* harvester);
 void extractSpice(Unit* currentUnit, SPICE* targetSpice);
 void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOURCE* resource, int sys_clock, SPICE** spiceHead);
 void removeSpice(SPICE** head, SPICE* target);
+void removeUnit(Unit** units, Unit* targetUnit);
+ObjectInfo checkObjectAtPosition(POSITION pos, Unit* units, BUILDING* buildings, SPICE* spices, SANDWORM* sandworms);
+BUILDING* createBuilding(BuildingType type, POSITION pos, BUILDING* head, FactionType faction);
+BuildingType* listCanCreateBuilding(RESOURCE resource, bool firstcall);
+int countCanCreateBuilding(RESOURCE resource);
+int getCreateBuildingCmd(int user_input, BuildingType* canCreateList, int count);
+void patrolTarget(Unit* unit);
+void findEnemyByVision(Unit* head, Unit* currentUnit);
+void executeBattle(Unit* currentUnit, Unit** head, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
+void getOtherUnitCommand(int user_input, POSITION cursor, Unit* selectedUnit, char* userCommand, GameState *gamestate);
+void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units);
 
 //Unit* removeUnit(Unit* units, Unit* targetUnit);
 
@@ -223,7 +234,7 @@ bool attemp_building(CURSOR cursor, BuildingType building, Unit* units, BUILDING
 
 }
 
-void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Unit* units, BUILDING**buildings, SPICE* spices, SANDWORM* sandworms) {
+void actBuildSpace(CURSOR cursor, BuildingType building, RESOURCE* resource, Unit* units, BUILDING** buildings, SPICE* spices, SANDWORM* sandworms) {
     bool canBuild = attemp_building(cursor, building, units, *buildings, spices, sandworms);
     if (canBuild) {
         *buildings = createBuilding(building, cursor.current, *buildings, FACTION_PLAYER);
@@ -319,7 +330,7 @@ bool handleBuildingCommand(BUILDING* building, Unit** units, int user_input, POS
 
 void getHarvestCommand(Unit* selectedUnit, int user_input, POSITION cursor, SPICE* spice, GameState* gamestate) { 
 
-    if (user_input == 'M' || user_input == 'm') {
+    if ((char)user_input == 'M' || (char)user_input == 'm') {
         // 스파이스 위치 검사. 
         SPICE* currentSpice = spice;
         while (currentSpice != NULL) {
@@ -499,4 +510,162 @@ void removeSpice(SPICE** head, SPICE* target) {
         current = current->next;            // 다음 노드로 이동
     }
 
+}
+
+
+void getOtherUnitCommand(int user_input, POSITION cursor, Unit* selectedUnit, char* userCommand, GameState* gamestate) {
+
+    //if (userCommand == 'M' || userCommand == 'm') {
+
+    //}
+    init_command();
+    insert_command_message("Press space on target place");
+
+    if (user_input == SPACEBYTE) { // 유저가 스페이스바를 누르면 명령어 수행
+
+
+        if (*userCommand == 'P' || *userCommand == 'p') {
+            selectedUnit->command = 'P';
+            selectedUnit->target = cursor;
+            selectedUnit->patrolPos = selectedUnit->pos; // patrol(순찰)명령을 받을 때 현재위치가 돌아와야할 위치. 
+        }
+        else if (*userCommand == 'M' || *userCommand == 'm') {
+            selectedUnit->command = 'M';
+            selectedUnit->target = cursor;
+        }
+        *gamestate = STATE_DEFAULT;
+    }
+
+    else if (user_input == ESCBYTE) {
+        userCommand = '\0';
+        *gamestate = STATE_DEFAULT;
+    }
+    return;
+}
+
+void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units) {
+    Unit* currentUnit = *units;
+    
+
+    while (currentUnit != NULL) {
+        if (currentUnit->type != HARVESTER) { // 하베스터 행동은 다른곳에서 처리하기에. 
+            const UnitAttributes* attributes = &UNIT_ATTRIBUTES[currentUnit->type];
+            findEnemyByVision(*units, currentUnit); // 이 함수에서는 현재유닛 기준에서 시야에 들어온 적군이 있으면 적군 구조체 저장 및 타겟 업데이트.
+
+            if (currentUnit->target.row > 0 && currentUnit->target.column > 0 && currentUnit->command != '\0') {  // 타겟이 유효한지 확인. ,, --> 타겟으로 주기적으로 이동하는 함수.
+                if (sys_clock % attributes->move_period != 0) {      // 이동주기 검사.
+                    return;  // 아직 이동 시간이 되지 않았음
+                }
+                // 타겟이랑 유닛이랑 1칸 차이일 때 if 커맨드가 P이면 타겟을 patrol_pos로
+                // 만약 patrolPos == pos가 같다면 command null 밑 패트롤 pos랑 타겟 둘다 0으로 
+                patrolTarget(currentUnit);
+
+
+
+                POSITION diff = psub(currentUnit->target, currentUnit->pos);
+                DIRECTION dir;
+
+
+                // 이동 방향 계산 (행, 열 차이에 따라 결정)
+                if (abs(diff.row) >= abs(diff.column)) {
+                    dir = (diff.row >= 0) ? d_down : d_up;
+                }
+                else {
+                    dir = (diff.column >= 0) ? d_right : d_left;
+                }
+
+                // 다음 위치 계산
+                POSITION next_pos = pmove(currentUnit->pos, dir);
+                // 이동 가능한지 확인
+                if (1 <= next_pos.row && next_pos.row <= MAP_HEIGHT - 2 &&
+                    1 <= next_pos.column && next_pos.column <= MAP_WIDTH - 2 &&
+                    map[0][next_pos.row][next_pos.column] == ' ' &&
+                    map[1][next_pos.row][next_pos.column] == -1) {
+
+                    // 현재 위치 비우기
+                    map[1][currentUnit->pos.row][currentUnit->pos.column] = -1;
+                    setColor(currentUnit->pos, COLOR_DEFAULT);
+
+                    // 새로운 위치로 이동
+                    currentUnit->pos = next_pos;
+                    int color;
+                    if (currentUnit->isally)color = COLOR_FRIENDLY;
+                    else color = COLOR_ENEMY;
+                    displayUnit(map, next_pos, color, 1, 1, attributes->symbol);
+                }
+
+                // 여기에 현재 유닛포인터와 어쩌구를 넣어서 전투 확인
+                executeBattle(currentUnit, units, map);
+
+            }
+        }
+        currentUnit = currentUnit->next;
+
+    }
+}
+
+void patrolTarget(Unit* unit) {
+    if ((abs(unit->target.row - unit->pos.row) == 1 && unit->target.column == unit->pos.column) ||
+        (abs(unit->target.column - unit->pos.column) == 1 && unit->target.row == unit->pos.row)) {     // 좌표평면에서 유닛의 위치랑 타겟의 위치가 1 차이난다(근접하다면)
+        if (unit->command == 'P') unit->target = unit->patrolPos; // 순찰 중이었다면 인접하면 패트롤로 돌아가기. 
+    }
+
+    if (unit->pos.row == unit->patrolPos.row && unit->pos.column == unit->patrolPos.column && 
+        unit->patrolPos.row == unit->target.row && unit->patrolPos.column == unit->target.column) {   // 순찰 중 && 목적지가 순찰지로 번경됨 && 현재위치가 순찰지라면 순찰갔다가 돌아온거니 해당 처리. 
+        unit->command = '\0';
+        unit->patrolPos = (POSITION){ -1,-1 };
+        unit->target = (POSITION){ -1,-1 };
+    }
+}
+
+void findEnemyByVision(Unit* head, Unit* currentUnit) {
+    const UnitAttributes* attributes = &UNIT_ATTRIBUTES[currentUnit->type];
+    while (head != NULL) {
+        // 현재 유닛과의 거리 계산
+        int row_diff = abs(head->pos.row - currentUnit->pos.row);
+        int col_diff = abs(head->pos.column - currentUnit->pos.column);
+
+        // 조건: vision 거리 이내 & 소속이 다름
+        if (row_diff <= attributes->vision && col_diff <= attributes->vision &&  // --> 현재 유닛기준에서 적군 유닛이 시야에 들어왔는지 확인, 커맨드가 입력된 상태였으면 수행하기에 
+            head->isally != currentUnit->isally) {
+
+            currentUnit->findEnemy = head; //  적군을 찾았으니 적군 정보 저장
+            currentUnit->target = head->pos;
+
+        }
+        head = head->next;
+    }
+}
+
+
+
+void executeBattle(Unit * currentUnit, Unit** head, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]) {
+    const UnitAttributes* attributes = &UNIT_ATTRIBUTES[currentUnit->type];
+    if (currentUnit->findEnemy == NULL) return;
+
+    Unit* enemy = currentUnit->findEnemy;
+    if (abs(currentUnit->pos.row - enemy->pos.row) + abs(currentUnit->pos.column - enemy->pos.column) == 1) { //적군과 이거랑 그 한칸 차이라면
+        enemy->health -= attributes->attack_power;
+        if (!enemy->isally) { // 적군이 공격당했을 때
+            insert_system_message("attack enemy %s", unitTypeToString(enemy->type));
+            insert_system_message("enemy health %d -> %d", enemy->health + attributes->attack_power, enemy->health);
+
+        }
+        else { //  아군이 공격당했을 때
+            insert_system_message("%s attackted by enemy", unitTypeToString(enemy->type));
+            insert_system_message("health %d -> %d", enemy->health + attributes->attack_power, enemy->health);
+        }
+
+     
+    }
+
+    if (enemy->health <= 0) { // 적군이 그 0이 되었으면!!
+        insert_system_message("delete %s", unitTypeToString(enemy->type));
+        toDefaultColorEmpty(enemy->pos, map);
+        removeUnit(head, enemy); // 연결 리스트에서 유닛 제거
+        
+        currentUnit->findEnemy = NULL; // 적군을 제거하면 적군 유닛 포인터 null
+    }
+        
+    
 }
