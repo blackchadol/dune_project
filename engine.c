@@ -54,6 +54,7 @@ insert_status_message() 함수 제작 -> 문자열 상수를 입력하면 상태창에 입력
 -> 각 유닛의 위치 및 기억된 구조체 정보를 가지고 인접한 칸에 만나면 공격력 만큼 체력이 낮아지도록 구현
 10-1. 적군 유닛과 만나면 전투를 하고 유닛의 체력이 0이하가 되면 삭제 코드 추가
 10-2. 유닛이 적군 건물과 인접하면 유닛의 공격력 만큼 건물 공격 및 내구도 0이되면 삭제
+10-3. 아군 건물의 내구도가 0보다 낮아지면 outro ㅇ
 */
 
 
@@ -98,6 +99,7 @@ void harvesterMove(Unit** units, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], RESOU
 void getOtherUnitCommand(int user_input, POSITION cursor, Unit* selectedUnit, char* userCommand, GameState* gamestate);
 void updateOtherUnit(char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH], int sys_clock, Unit** units, BUILDING** buildings);
 void checkBuildingDurability(BUILDING** head, char map[N_LAYER][MAP_HEIGHT][MAP_WIDTH]);
+void checkBaseDurability(BUILDING* buildings);
 
 /* ================= control =================== */
 int sys_clock = 0;		// system-wide clock(ms)
@@ -182,7 +184,10 @@ int main(void) {
 		else {
 			// 방향키 외의 입력
 			switch (key) {
-			case k_quit: outro();
+			case k_quit: {
+				outro();
+				break;
+			}
 			case k_none:
 				break;
 			case k_undef:
@@ -310,6 +315,7 @@ int main(void) {
 			}
 			
 		}
+		checkBaseDurability(buildings);
 		updateOtherUnit(map, sys_clock, &units, &buildings);
 		updatePopulation(units, &resource);
 		checkBuildingDurability(&buildings, map);
@@ -318,8 +324,16 @@ int main(void) {
 		sys_clock += 10;
 		
 	}
+	
 }
-
+void checkBaseDurability(BUILDING* buildings) {
+	while (buildings != NULL) {
+		if (buildings->type == BASE && buildings->isally && buildings->durability <= 0) { //건물 연결리스트를 순회하며 아군 본진의 내구도가 0보다 낮아지면 게임종료
+			outro();
+		}
+		buildings = buildings->next;
+	}
+}
 
 /* ================= subfunctions =================== */
 void intro(void) {
@@ -344,7 +358,24 @@ void intro(void) {
 }
 
 void outro(void) {
-	printf("exiting...\n");
+	printf("                              ~~~~~~~~~~~~\n");
+	printf("                         ~~~~~~~~~~~  ~~~  ~~~~~~~~~~\n");
+	printf("                      ~~~    ~~~~~~~~~~~~~~~   ~~~~~~~\n");
+	printf("                   ~~~~~    ~~~~    ~~~~~~~~~~~~    ~~~~\n");
+	printf("                ~~~~~~   ~~~       ~~~~~    ~~~~~~     ~~~\n");
+	printf("             ~~~~~~~   ~~         ~~   ~~      ~~~~~    ~~~\n");
+	printf("           ~~~~~~~   ~~                      ~~~~~~~      ~~~\n");
+	printf("        ~~~~~~~    ~~                        ~~~~~~~~     ~~~~\n");
+	printf("     ~~~~~~~~~~     ~                        ~~~~~~~~      ~~~~~\n");
+	printf("   ~~~~~~~~~~~~~               __             ~~~~~~      ~~~~~~~~\n");
+	printf(" ~~~~~~~~~~~~~~~~~          __/o \\__            ~~~~    ~~~~~~~~~~~~\n");
+	printf("~~~~~~~~~~~~~~~~~~~        /o \\   /o\\              ~~~~~~~~~~~~~~~~~~\n");
+	printf("~~~~~~~~~~~~~~~~~~~~~~~   ~~~~~~~~~~~~~~~~~    ~~~~~~~~~~~~~~~~~~~~~~\n");
+	printf("~~~~~~~~~~~~~~~~~~~~~~~   ~~~~~~~~~~~~~~~~~    ~~~~~~~~~~~~~~~~~~~~~~\n");
+	printf("\n");
+	printf("                           GAME FINISH\n");
+	Sleep(2000);
+	system("cls");
 	exit(0);
 }
 
@@ -615,10 +646,7 @@ void startObject(Unit** units, BUILDING** buildings, SPICE** spice, SANDWORM** s
 
 	*units = createUnit(0, (POSITION) { 14, 1 }, *units, FACTION_PLAYER); // 플레이어 유닛 생성
 	*units = createUnit(0, (POSITION) { 3, 58 }, *units, FACTION_ENEMY); // 플레이어 유닛 생성
-	*units = createUnit(1, (POSITION) { 10, 10 }, * units, FACTION_PLAYER); // 샌드웜 행동을 보기위한 샘플유닛 생성
-	
-	*units = createUnit(3, (POSITION) { 5, 58 }, * units, FACTION_ENEMY);
-	//*units = createUnit(4, (POSITION) { 15, 8 }, * units, FACTION_ENEMY);
+
 	
 
 	*buildings = createBuilding(1, (POSITION) { 15, 1 }, *buildings, FACTION_PLAYER);
@@ -629,9 +657,6 @@ void startObject(Unit** units, BUILDING** buildings, SPICE** spice, SANDWORM** s
 	*buildings = createBuilding(0, (POSITION) { 1, 57 }, *buildings, FACTION_ENEMY);
 	*buildings = createBuilding(1, (POSITION) { 1, 55 }, * buildings, FACTION_ENEMY);
 
-	*buildings = createBuilding(1, (POSITION) { 15, 6 }, * buildings, FACTION_ENEMY);
-	*buildings = createBuilding(0, (POSITION) { 15, 6 }, * buildings, FACTION_ENEMY);
-	
 	*spice = createSpice(5, (POSITION) { 12, 1 }, *spice);
 	*spice = createSpice(5, (POSITION) { 5, 58 }, *spice);
 	
